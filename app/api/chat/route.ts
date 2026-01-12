@@ -9,11 +9,26 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
+    const sessionId = formData.get('session_id') as string;
+    const chatId = formData.get('chat_id') as string;
+
+    console.log('📥 Received data:');
+    console.log('   - Chat ID:', chatId);
+    console.log('   - Session ID:', sessionId);
+    console.log('   - Audio file:', audioFile?.name);
 
     if (!audioFile) {
       console.error('❌ No audio file in request');
       return NextResponse.json(
         { error: 'No audio file provided' },
+        { status: 400 }
+      );
+    }
+
+    if (!sessionId) {
+      console.error('❌ No session ID in request');
+      return NextResponse.json(
+        { error: 'No session ID provided' },
         { status: 400 }
       );
     }
@@ -49,11 +64,12 @@ export async function POST(request: NextRequest) {
 
     // Create FormData for external API
     const apiFormData = new FormData();
-    apiFormData.append('session_id', '');
+    apiFormData.append('session_id', sessionId); // ✅ Now sending the actual session_id
     apiFormData.append('audio', audioFile, 'audio.mp3');
 
     const apiUrl = 'http://208.122.213.38:8000/voice-to-voice';
     console.log('📡 Calling:', apiUrl);
+    console.log('📡 Sending session_id:', sessionId);
     console.log('📡 Sending audio:', audioFile.size, 'bytes');
 
     const response = await fetch(apiUrl, {
@@ -163,13 +179,15 @@ export async function POST(request: NextRequest) {
     console.log('========================================');
 
     return NextResponse.json({
-      success: true,
-      text: 'AI Response',
-      audioUrl: audioDataUrl,
-      metadata: {
-        audioSize: audioBuffer.byteLength,
-        timestamp: new Date().toISOString()
-      }
+        success: true,
+        text: '🔊 Voice response',  // ✅ Changed to generic text
+        audioUrl: audioDataUrl,
+        metadata: {
+            audioSize: audioBuffer.byteLength,
+            chatId: chatId,
+            sessionId: sessionId,
+            timestamp: new Date().toISOString()
+        }
     });
 
   } catch (error: any) {
