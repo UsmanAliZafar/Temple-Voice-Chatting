@@ -23,11 +23,8 @@ export default function Home() {
   const handleVoiceData = async (audioBlob: Blob) => {
     console.log('========================================');
     console.log('🎤 FRONTEND: Starting voice data processing');
+    console.log('Audio blob size:', audioBlob.size, 'bytes');
     console.log('========================================');
-    console.log('Audio blob:', {
-      size: audioBlob.size,
-      type: audioBlob.type
-    });
     
     setIsProcessing(true);
 
@@ -43,11 +40,8 @@ export default function Home() {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      console.log('📦 Creating FormData...');
       const formData = new FormData();
-      formData.append('session_id', '');
-      formData.append('audio', audioBlob, 'voice.webm');
-      console.log('✅ FormData created');
+      formData.append('audio', audioBlob, 'audio.mp3');
 
       console.log('📡 Sending request to /api/chat...');
       const startTime = Date.now();
@@ -58,23 +52,65 @@ export default function Home() {
       });
 
       const duration = Date.now() - startTime;
-      console.log(`📡 Response received in ${duration}ms`);
-      console.log('Response status:', response.status);
+      console.log(`📡 Response received in ${duration}ms with status ${response.status}`);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ API Error:', errorData);
-        throw new Error(errorData.message || 'API request failed');
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response JSON');
+        throw new Error('Invalid response from server');
       }
 
-      console.log('📥 Parsing JSON response...');
-      const data = await response.json();
-      console.log('✅ Response data:', {
-        success: data.success,
-        hasAudioUrl: !!data.audioUrl,
-        audioUrlLength: data.audioUrl?.length,
-        metadata: data.metadata
-      });
+      if (!response.ok) {
+        // Log the full error for debugging but don't use console.error for expected errors
+        console.log('API returned error:', {
+          status: response.status,
+          error: data.error,
+          message: data.message,
+          details: data.details
+        });
+        
+        // Create user-friendly error message based on the error type
+        let errorMessage = 'Sorry, there was an error processing your message.';
+        
+        if (data.message) {
+          // Check for specific error patterns
+          if (data.message.includes('missing') || 
+              data.message.includes('audio file was not received') ||
+              data.message.includes('Field required')) {
+            errorMessage = '🎤 Audio not detected. Please check your microphone and try again.';
+          } else if (data.message.includes('too small') || 
+                    data.message.includes('empty')) {
+            errorMessage = '🎤 Recording is too short. Please speak longer and try again.';
+          } else if (data.message.includes('Validation error')) {
+            errorMessage = '⚠️ Invalid audio format. Please try recording again.';
+          } else if (data.message.includes('microphone')) {
+            errorMessage = `🎤 ${data.message}`;
+          } else if (response.status === 500) {
+            errorMessage = '⚠️ Server error occurred. Please try again.';
+          } else if (response.status === 400) {
+            errorMessage = `⚠️ ${data.message}`;
+          } else {
+            // For other errors, show the message if it's user-friendly
+            errorMessage = `⚠️ ${data.message}`;
+          }
+        } else if (response.status === 500) {
+          errorMessage = '⚠️ Server error. Please try again later.';
+        } else if (response.status === 400) {
+          errorMessage = '⚠️ Invalid request. Please try recording again.';
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      // Success case
+      if (!data.success || !data.audioUrl) {
+        console.warn('Response missing expected data:', data);
+        throw new Error('Invalid response format from server');
+      }
+
+      console.log('✅ Successfully received audio response');
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -84,29 +120,31 @@ export default function Home() {
         audioUrl: data.audioUrl,
       };
 
-      console.log('✅ Adding assistant message to chat');
       setMessages(prev => [...prev, assistantMessage]);
-      console.log('========================================');
-      console.log('✅ FRONTEND: Processing completed successfully');
+      console.log('✅ Processing completed successfully');
       console.log('========================================');
       
     } catch (error: any) {
-      console.error('========================================');
-      console.error('❌ FRONTEND ERROR');
-      console.error('========================================');
-      console.error('Error:', error);
-      console.error('Error message:', error.message);
-      console.error('========================================');
+      // Only use console.error for unexpected/genuine errors
+      if (error.message.includes('fetch') || 
+          error.message.includes('network') ||
+          error.message.includes('Invalid response')) {
+        console.error('Genuine error occurred:', error);
+      } else {
+        // Expected errors (validation, etc.) just log normally
+        console.log('User-facing error:', error.message);
+      }
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: `Sorry, there was an error: ${error.message}. Please try again.`,
+        content: error.message || 'Sorry, something went wrong. Please try again.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsProcessing(false);
+      console.log('========================================');
     }
   };
 

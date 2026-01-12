@@ -1,7 +1,7 @@
 // app/components/ChatMessages.tsx
 'use client';
 import { Message } from '../types/chat';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -22,13 +22,20 @@ function MessageItem({ message }: { message: Message }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string>('');
 
+  // Check if message is an error message
+  const isErrorMessage = message.type === 'assistant' && 
+    (message.content.includes('⚠️') || 
+     message.content.includes('Sorry') ||
+     message.content.includes('error') ||
+     message.content.includes('🎤'));
+
   const playAudio = () => {
     if (audioRef.current) {
       audioRef.current.play()
         .then(() => setIsPlaying(true))
         .catch(err => {
-          console.error('Audio play error:', err);
-          setError('Failed to play audio');
+          console.log('Audio playback failed:', err.message);
+          setError('Could not play audio');
         });
     }
   };
@@ -38,7 +45,7 @@ function MessageItem({ message }: { message: Message }) {
   };
 
   return (
-    <div className={`message message-${message.type}`}>
+    <div className={`message message-${message.type} ${isErrorMessage ? 'message-error' : ''}`}>
       <div className="message-content">
         <div className="message-header">
           <span className="message-sender">
@@ -54,14 +61,14 @@ function MessageItem({ message }: { message: Message }) {
         
         <p className="message-text">{message.content}</p>
         
-        {message.audioUrl && (
+        {message.audioUrl && !isErrorMessage && (
           <div className="message-audio-container">
             <audio 
               ref={audioRef}
               src={message.audioUrl}
               onEnded={handleEnded}
               onError={(e) => {
-                console.error('Audio error:', e);
+                console.log('Audio loading error');
                 setError('Audio playback error');
               }}
             />
