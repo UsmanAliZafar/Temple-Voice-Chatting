@@ -19,13 +19,20 @@ export default function Home() {
     scrollToBottom();
   }, [messages]);
 
+  // Add this to your handleVoiceData function in page.tsx
   const handleVoiceData = async (audioBlob: Blob) => {
+    console.log('========================================');
+    console.log('🎤 FRONTEND: Starting voice data processing');
+    console.log('========================================');
+    console.log('Audio blob:', {
+      size: audioBlob.size,
+      type: audioBlob.type
+    });
+    
     setIsProcessing(true);
 
-    // Create audio URL for user's recording
     const userAudioUrl = URL.createObjectURL(audioBlob);
 
-    // Add user message with audio
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
@@ -36,22 +43,39 @@ export default function Home() {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      // Send audio to your API
+      console.log('📦 Creating FormData...');
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'voice.mp3');
+      formData.append('session_id', '');
+      formData.append('audio', audioBlob, 'voice.webm');
+      console.log('✅ FormData created');
 
+      console.log('📡 Sending request to /api/chat...');
+      const startTime = Date.now();
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
       });
 
+      const duration = Date.now() - startTime;
+      console.log(`📡 Response received in ${duration}ms`);
+      console.log('Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('API request failed');
+        const errorData = await response.json();
+        console.error('❌ API Error:', errorData);
+        throw new Error(errorData.message || 'API request failed');
       }
 
+      console.log('📥 Parsing JSON response...');
       const data = await response.json();
+      console.log('✅ Response data:', {
+        success: data.success,
+        hasAudioUrl: !!data.audioUrl,
+        audioUrlLength: data.audioUrl?.length,
+        metadata: data.metadata
+      });
 
-      // Add assistant response with audio
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -60,13 +84,24 @@ export default function Home() {
         audioUrl: data.audioUrl,
       };
 
+      console.log('✅ Adding assistant message to chat');
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error processing voice:', error);
+      console.log('========================================');
+      console.log('✅ FRONTEND: Processing completed successfully');
+      console.log('========================================');
+      
+    } catch (error: any) {
+      console.error('========================================');
+      console.error('❌ FRONTEND ERROR');
+      console.error('========================================');
+      console.error('Error:', error);
+      console.error('Error message:', error.message);
+      console.error('========================================');
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: 'Sorry, there was an error processing your message. Please try again.',
+        content: `Sorry, there was an error: ${error.message}. Please try again.`,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);

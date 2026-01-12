@@ -1,6 +1,7 @@
+// app/components/ChatMessages.tsx
 'use client';
-
-import { Message } from '@/types/chat';
+import { Message } from '../types/chat';
+import { useRef, useEffect, useState } from 'react';
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -10,53 +11,85 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
   return (
     <>
       {messages.map((message) => (
-        <div
-          key={message.id}
-          className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-        >
-          <div
-            className={`
-              max-w-[80%] rounded-2xl px-4 py-3 shadow-sm
-              ${message.type === 'user'
-                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-br-sm'
-                : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-              }
-            `}
-          >
-            {/* Message Content */}
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-              {message.content}
-            </p>
-
-            {/* Audio Player (if available) */}
-            {message.audioUrl && (
-              <div className="mt-2">
-                <audio 
-                  controls 
-                  className="w-full h-8"
-                  style={{ maxWidth: '300px' }}
-                >
-                  <source src={message.audioUrl} type="audio/mpeg" />
-                  Your browser does not support the audio element.
-                </audio>
-              </div>
-            )}
-
-            {/* Timestamp */}
-            <p
-              className={`
-                text-xs mt-1
-                ${message.type === 'user' ? 'text-indigo-100' : 'text-gray-500'}
-              `}
-            >
-              {new Date(message.timestamp).toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })}
-            </p>
-          </div>
-        </div>
+        <MessageItem key={message.id} message={message} />
       ))}
     </>
+  );
+}
+
+function MessageItem({ message }: { message: Message }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string>('');
+
+  const playAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch(err => {
+          console.error('Audio play error:', err);
+          setError('Failed to play audio');
+        });
+    }
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+  };
+
+  return (
+    <div className={`message message-${message.type}`}>
+      <div className="message-content">
+        <div className="message-header">
+          <span className="message-sender">
+            {message.type === 'user' ? 'You' : 'AI Assistant'}
+          </span>
+          <span className="message-time">
+            {message.timestamp.toLocaleTimeString([], { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })}
+          </span>
+        </div>
+        
+        <p className="message-text">{message.content}</p>
+        
+        {message.audioUrl && (
+          <div className="message-audio-container">
+            <audio 
+              ref={audioRef}
+              src={message.audioUrl}
+              onEnded={handleEnded}
+              onError={(e) => {
+                console.error('Audio error:', e);
+                setError('Audio playback error');
+              }}
+            />
+            <button 
+              onClick={playAudio}
+              className={`audio-play-button ${isPlaying ? 'playing' : ''}`}
+              disabled={isPlaying}
+            >
+              {isPlaying ? (
+                <>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                  </svg>
+                  <span>Playing...</span>
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  <span>Play Audio</span>
+                </>
+              )}
+            </button>
+            {error && <span className="audio-error">{error}</span>}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

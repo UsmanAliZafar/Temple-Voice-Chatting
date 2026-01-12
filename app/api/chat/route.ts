@@ -1,6 +1,11 @@
+// app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-// api/chat/route.ts
+
 export async function POST(request: NextRequest) {
+  console.log('========================================');
+  console.log('🎙️ API ROUTE CALLED');
+  console.log('========================================');
+  
   try {
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
@@ -12,39 +17,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create FormData for the external API
-    const apiFormData = new FormData();
-    apiFormData.append('session_id', ''); // Empty session_id as per your API
-    apiFormData.append('audio', audioFile);
+    console.log('✅ Audio file received:');
+    console.log('   - Name:', audioFile.name);
+    console.log('   - Size:', audioFile.size, 'bytes');
+    console.log('   - Type:', audioFile.type);
 
-    // Call your voice-to-voice API
-    const apiUrl = process.env.VOICE_API_URL || 'http://208.122.213.38:8000/voice-to-voice';
-    
+    // Create FormData for external API
+    const apiFormData = new FormData();
+    apiFormData.append('session_id', '');
+    apiFormData.append('audio', audioFile, 'audio.mp3'); // Ensure .mp3 extension
+
+    const apiUrl = 'http://208.122.213.38:8000/voice-to-voice';
+    console.log('📡 Calling:', apiUrl);
+
     const response = await fetch(apiUrl, {
       method: 'POST',
       body: apiFormData,
     });
 
+    console.log('📡 Response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ API Error:', errorText);
+      throw new Error(`API returned status ${response.status}: ${errorText}`);
     }
 
-    // The API returns audio directly
     const audioBuffer = await response.arrayBuffer();
-    const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-    
-    // Convert to base64 to send to frontend
+    console.log('✅ Received audio:', audioBuffer.byteLength, 'bytes');
+
     const base64Audio = Buffer.from(audioBuffer).toString('base64');
     const audioDataUrl = `data:audio/mpeg;base64,${base64Audio}`;
 
+    console.log('✅ SUCCESS');
     return NextResponse.json({
-      text: 'Voice response received',
+      success: true,
+      text: 'AI Response',
       audioUrl: audioDataUrl,
     });
-  } catch (error) {
-    console.error('Error processing audio:', error);
+
+  } catch (error: any) {
+    console.error('❌ ERROR:', error.message);
     return NextResponse.json(
-      { error: 'Failed to process audio' },
+      { error: 'Failed to process audio', message: error.message },
       { status: 500 }
     );
   }

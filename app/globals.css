@@ -540,3 +540,150 @@ audio::-webkit-media-controls-panel {
     max-width: 90%;
   }
 }
+
+/* Message Styles */
+.message {
+  margin-bottom: 16px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.message-user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.message-assistant {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.message-content {
+  max-width: 70%;
+  padding: 16px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.message-user .message-content {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.message-sender {
+  font-weight: 600;
+}
+
+.message-text {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.message-audio-container {
+  margin-top: 12px;
+}
+
+.audio-play-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.message-user .audio-play-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.audio-play-button:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.1);
+  transform: scale(1.02);
+}
+
+.message-user .audio-play-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.audio-play-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.audio-play-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.audio-play-button.playing {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.audio-error {
+  display: block;
+  margin-top: 8px;
+  color: #e53e3e;
+  font-size: 12px;
+}
+
+.error-message {
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #c00;
+  text-align: center;
+}
+
+.loading-message, .converting-indicator {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  color: #1976d2;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.spinner {
+  border: 3px solid #e3f2fd;
+  border-top: 3px solid #1976d2;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
