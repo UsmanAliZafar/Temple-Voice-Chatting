@@ -5,67 +5,105 @@ import { Message } from '../types/chat';
 import VoiceRecorder from '../components/VoiceRecorder';
 import ChatMessages from '../components/ChatMessages';
 
-interface ChatData {
+interface SessionData {
   status: boolean;
-  chat_id: string;
-  sender: {
-    client_id: number;
+  session_id: string;
+  customer: {
+    id: number;
     name: string;
-    profile_image: string;
+    email: string;
   };
-  receiver: {
-    session_id: string;
+  agent: {
+    id: number;
+    operator_id: number;
     name: string;
-    profile_image: string;
+    operator_profile_image: string | null;
   };
+  url: string;
+}
+
+interface ErrorResponse {
+  status: false;
+  session: string;
+  message: string;
 }
 
 export default function ChatPage() {
   const params = useParams();
-  const chat_id = params.chat_id as string;
+  const landing_key = params.landing_key as string;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [chatData, setChatData] = useState<ChatData | null>(null);
+  const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const [errorType, setErrorType] = useState<'expired' | 'error' | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch chat data on mount
-  useEffect(() => {
-    if (chat_id) {
-      fetchChatData();
-    }
-  }, [chat_id]);
+  const backUrl = process.env.NEXT_PUBLIC_BACK_URL_SESSION_EXPIRED || 'https://phonetalktemple.com';
 
-  const fetchChatData = async () => {
+  // Fetch session data on mount
+  useEffect(() => {
+    if (landing_key) {
+      fetchSessionData();
+    }
+  }, [landing_key]);
+
+  const fetchSessionData = async () => {
     try {
       setIsLoading(true);
       setError('');
+      setIsSessionExpired(false);
+      setErrorType(null);
       
-      console.log('Fetching chat data for:', chat_id);
-      const response = await fetch(`https://mocki.io/v1/${chat_id}`);
+      console.log('Fetching session data for:', landing_key);
       
-      if (!response.ok) {
-        throw new Error('Failed to fetch chat data');
+      const response = await fetch(`/api/get-session-info`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ landing_key }),
+      });
+      
+      const data = await response.json();
+
+      // Check if session is expired
+      if (!data.status && data.session === 'expired') {
+        console.log('Session expired:', data.message);
+        setIsSessionExpired(true);
+        setErrorType('expired');
+        setErrorMessage(data.message || 'This chat session has been ended. Please start a new session.');
+        setIsLoading(false);
+        return;
       }
 
-      const data: ChatData = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch session data');
+      }
       
       if (!data.status) {
-        throw new Error('Invalid chat session');
+        throw new Error(data.message || 'Invalid session');
       }
 
-      console.log('Chat data loaded:', data);
-      setChatData(data);
+      console.log('Session data loaded:', data);
+      setSessionData(data);
       setIsLoading(false);
       
     } catch (error: any) {
-      console.error('Error fetching chat data:', error);
-      setError(error.message || 'Failed to load chat');
+      console.error('Error fetching session data:', error);
+      setError(error.message || 'Failed to load session');
+      setErrorType('error');
+      setErrorMessage(error.message || 'Failed to load session');
       setIsLoading(false);
     }
+  };
+
+  const handleGoBack = () => {
+    window.location.href = backUrl;
   };
 
   const scrollToBottom = () => {
@@ -77,15 +115,16 @@ export default function ChatPage() {
   }, [messages]);
 
   const handleVoiceData = async (audioBlob: Blob) => {
-    if (!chatData) {
-      console.error('No chat data available');
+    if (!sessionData) {
+      console.error('No session data available');
       return;
     }
 
     console.log('========================================');
     console.log('🎤 FRONTEND: Starting voice data processing');
-    console.log('Chat ID:', chatData.chat_id);
-    console.log('Session ID:', chatData.receiver.session_id);
+    console.log('Session ID:', sessionData.session_id);
+    console.log('Customer:', sessionData.customer.name);
+    console.log('Agent:', sessionData.agent.name);
     console.log('Audio blob size:', audioBlob.size, 'bytes');
     console.log('========================================');
     
@@ -105,8 +144,7 @@ export default function ChatPage() {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.mp3');
-      formData.append('session_id', chatData.receiver.session_id);
-      formData.append('chat_id', chatData.chat_id);
+      formData.append('session_id', sessionData.session_id);
 
       console.log('📡 Sending request to /api/chat...');
       const startTime = Date.now();
@@ -125,6 +163,15 @@ export default function ChatPage() {
       } catch (parseError) {
         console.error('Failed to parse response JSON');
         throw new Error('Invalid response from server');
+      }
+
+      // Check if session expired during chat
+      if (!data.status && data.session === 'expired') {
+        console.log('Session expired during chat:', data.message);
+        setIsSessionExpired(true);
+        setErrorType('expired');
+        setErrorMessage(data.message || 'This chat session has been ended. Please start a new session.');
+        return;
       }
 
       if (!response.ok) {
@@ -236,8 +283,49 @@ export default function ChatPage() {
     );
   }
 
+  // Session Expired State
+  if (isSessionExpired && errorType === 'expired') {
+    return (
+      <div>
+        <header className="header">
+          <div className="header-container">
+            <div className="header-logo">
+              <div className="logo-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+              <div className="logo-text">
+                <h1>VoiceChat AI</h1>
+                <p>Session Expired</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="main-container">
+          <div className="session-expired-container">
+            <div className="expired-icon">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2>Session Expired</h2>
+            <p className="expired-message">{errorMessage}</p>
+            <button onClick={handleGoBack} className="back-button">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="back-icon">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Go Back to Start New Session
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Error state
-  if (error || !chatData) {
+  if (error || !sessionData) {
     return (
       <div>
         <header className="header">
@@ -264,10 +352,15 @@ export default function ChatPage() {
               </svg>
             </div>
             <h2>Session Error</h2>
-            <p>{error || 'Failed to load chat session'}</p>
-            <button onClick={fetchChatData} className="retry-button">
-              Try Again
-            </button>
+            <p>{errorMessage || error || 'Failed to load session'}</p>
+            <div className="error-actions">
+              <button onClick={fetchSessionData} className="retry-button">
+                Try Again
+              </button>
+              <button onClick={handleGoBack} className="back-button-secondary">
+                Go Back
+              </button>
+            </div>
           </div>
         </main>
       </div>
@@ -277,6 +370,27 @@ export default function ChatPage() {
   // Main chat interface
   return (
     <div>
+      {/* Session Expired Overlay during chat */}
+      {isSessionExpired && (
+        <div className="session-expired-overlay">
+          <div className="session-expired-modal">
+            <div className="expired-icon-modal">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2>Session Expired</h2>
+            <p>{errorMessage}</p>
+            <button onClick={handleGoBack} className="back-button">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="back-icon">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Go Back to Start New Session
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header with User Info */}
       <header className="header">
         <div className="header-container">
@@ -288,17 +402,15 @@ export default function ChatPage() {
             </div>
             <div className="logo-text">
               <h1>VoiceChat AI</h1>
-              <p>Chatting with {chatData.receiver.name}</p>
+              <p>Chatting with {sessionData.agent.name}</p>
             </div>
           </div>
           
           <div className="user-info">
-            <img 
-              src={chatData.sender.profile_image} 
-              alt={chatData.sender.name}
-              className="user-avatar"
-            />
-            <span className="user-name">{chatData.sender.name}</span>
+            <div className="user-avatar-placeholder">
+              {sessionData.customer.name.charAt(0).toUpperCase()}
+            </div>
+            <span className="user-name">{sessionData.customer.name}</span>
           </div>
         </div>
       </header>
@@ -309,13 +421,19 @@ export default function ChatPage() {
         {messages.length === 0 && (
           <div className="welcome-section">
             <div className="welcome-icon">
-              <img 
-                src={chatData.receiver.profile_image} 
-                alt={chatData.receiver.name}
-                className="receiver-avatar-large"
-              />
+              {sessionData.agent.operator_profile_image ? (
+                <img 
+                  src={sessionData.agent.operator_profile_image} 
+                  alt={sessionData.agent.name}
+                  className="agent-avatar-large-image"
+                />
+              ) : (
+                <div className="agent-avatar-large">
+                  {sessionData.agent.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
-            <h2>Chat with {chatData.receiver.name}</h2>
+            <h2>Chat with {sessionData.agent.name}</h2>
             <p>
               Press the microphone button below to start a conversation. 
               Speak naturally and I'll respond with text and voice.
@@ -389,14 +507,17 @@ export default function ChatPage() {
               onVoiceData={handleVoiceData}
               isRecording={isRecording}
               setIsRecording={setIsRecording}
-              disabled={isProcessing}
+              disabled={isProcessing || isSessionExpired}
             />
           </div>
         </div>
 
         {/* Footer Info */}
         <div className="footer-info">
-          <p>Chat ID: {chatData.chat_id} | Session: {chatData.receiver.session_id}</p>
+          <p>Session: {sessionData.session_id}</p>
+          <a href={sessionData.url} target="_blank" rel="noopener noreferrer" className="agent-link">
+            View Agent Profile
+          </a>
         </div>
       </main>
     </div>

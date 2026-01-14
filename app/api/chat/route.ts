@@ -10,10 +10,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
     const sessionId = formData.get('session_id') as string;
-    const chatId = formData.get('chat_id') as string;
 
     console.log('📥 Received data:');
-    console.log('   - Chat ID:', chatId);
     console.log('   - Session ID:', sessionId);
     console.log('   - Audio file:', audioFile?.name);
 
@@ -64,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     // Create FormData for external API
     const apiFormData = new FormData();
-    apiFormData.append('session_id', sessionId); // ✅ Now sending the actual session_id
+    apiFormData.append('session_id', sessionId);
     apiFormData.append('audio', audioFile, 'audio.mp3');
 
     const apiUrl = 'http://208.122.213.38:8000/voice-to-voice';
@@ -88,10 +86,8 @@ export async function POST(request: NextRequest) {
         const errorData = await response.json();
         console.error('❌ API Error Response:', JSON.stringify(errorData, null, 2));
         
-        // Handle Pydantic validation errors
         if (errorData.detail) {
           if (Array.isArray(errorData.detail)) {
-            // Pydantic validation error format
             const errors = errorData.detail.map((err: any) => {
               const field = err.loc ? err.loc.join('.') : 'unknown';
               return `${field}: ${err.msg}`;
@@ -100,7 +96,6 @@ export async function POST(request: NextRequest) {
             errorMessage = `Validation error: ${errors}`;
             errorDetails = errorData.detail;
             
-            // Check specifically for missing audio field
             const missingAudio = errorData.detail.some((err: any) => 
               err.type === 'missing' && 
               err.loc && 
@@ -111,7 +106,6 @@ export async function POST(request: NextRequest) {
               errorMessage = 'Audio file was not received by the API. This might be due to an empty or corrupted audio file.';
             }
           } else if (typeof errorData.detail === 'string') {
-            // Simple string error
             errorMessage = errorData.detail;
           }
         }
@@ -133,14 +127,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get content type
     const contentType = response.headers.get('content-type');
     console.log('📥 Response content-type:', contentType);
 
-    // Check if response is actually audio
     if (!contentType?.includes('audio') && !contentType?.includes('mpeg') && !contentType?.includes('octet-stream')) {
       console.warn('⚠️ Unexpected content-type:', contentType);
-      // Try to parse as JSON to see if there's an error
       try {
         const jsonResponse = await response.json();
         console.error('❌ Expected audio but got JSON:', jsonResponse);
@@ -171,7 +162,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert to base64
     const base64Audio = Buffer.from(audioBuffer).toString('base64');
     const audioDataUrl = `data:audio/mpeg;base64,${base64Audio}`;
 
@@ -179,15 +169,14 @@ export async function POST(request: NextRequest) {
     console.log('========================================');
 
     return NextResponse.json({
-        success: true,
-        text: '🔊 Voice response',  // ✅ Changed to generic text
-        audioUrl: audioDataUrl,
-        metadata: {
-            audioSize: audioBuffer.byteLength,
-            chatId: chatId,
-            sessionId: sessionId,
-            timestamp: new Date().toISOString()
-        }
+      success: true,
+      text: '🔊 Voice response',
+      audioUrl: audioDataUrl,
+      metadata: {
+        audioSize: audioBuffer.byteLength,
+        sessionId: sessionId,
+        timestamp: new Date().toISOString()
+      }
     });
 
   } catch (error: any) {
