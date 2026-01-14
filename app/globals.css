@@ -1598,3 +1598,76 @@ audio::-webkit-media-controls-panel {
     font-size: 36px;
   }
 }
+
+/*  */
+
+/* Add this to your CSS file (e.g., globals.css or styles.css) */
+
+/* Back to Agent Button in Header */
+.back-to-agent-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 0.5rem;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.back-to-agent-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.back-to-agent-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.back-to-agent-button .back-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.back-to-agent-button span {
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .back-to-agent-button {
+    padding: 0.5rem;
+  }
+  
+  .back-to-agent-button span {
+    display: none; /* Hide text on mobile, show only icon */
+  }
+  
+  .back-to-agent-button .back-icon {
+    margin: 0;
+  }
+}
+
+/* Update header-container to accommodate the back button */
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  gap: 1rem;
+}
+
+/* Make user-info and back button group together */
+.header-container > div:last-of-type {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}

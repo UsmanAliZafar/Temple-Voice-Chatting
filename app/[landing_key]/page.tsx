@@ -1,3 +1,4 @@
+// [landing_key]/page.tsx
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
@@ -44,6 +45,20 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const backUrl = process.env.NEXT_PUBLIC_BACK_URL_SESSION_EXPIRED || 'https://phonetalktemple.com';
+
+  // Helper function to convert base64 to blob URL
+  const base64ToBlob = (base64: string, mimeType: string): Blob => {
+    const cleanBase64 = base64.replace(/\s/g, '');
+    const byteCharacters = atob(cleanBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
+  };
 
   // Fetch session data on mount
   useEffect(() => {
@@ -160,13 +175,20 @@ export default function ChatPage() {
       let data;
       try {
         data = await response.json();
+        console.log('📦 Response data:', {
+          success: data.success,
+          hasAudio: !!data.audio,
+          format: data.format,
+          mimeType: data.mimeType,
+          size: data.size
+        });
       } catch (parseError) {
-        console.error('Failed to parse response JSON');
+        console.error('Failed to parse response JSON:', parseError);
         throw new Error('Invalid response from server');
       }
 
       // Check if session expired during chat
-      if (!data.status && data.session === 'expired') {
+      if (data.expired || (!data.status && data.session === 'expired')) {
         console.log('Session expired during chat:', data.message);
         setIsSessionExpired(true);
         setErrorType('expired');
@@ -212,19 +234,37 @@ export default function ChatPage() {
         throw new Error(errorMessage);
       }
 
-      if (!data.success || !data.audioUrl) {
-        console.warn('Response missing expected data:', data);
-        throw new Error('Invalid response format from server');
+      // Check for success and audio data (base64)
+      if (!data.success) {
+        console.error('Response indicates failure:', data);
+        throw new Error(data.error || data.message || 'Request failed');
+      }
+
+      if (!data.audio) {
+        console.error('Response missing audio data:', data);
+        throw new Error('No audio data in response');
       }
 
       console.log('✅ Successfully received audio response');
+      console.log('Converting base64 to blob...');
+
+      // Convert base64 audio to blob and create URL
+      const mimeType = data.mimeType || 'audio/wav';
+      const aiAudioBlob = base64ToBlob(data.audio, mimeType);
+      const aiAudioUrl = URL.createObjectURL(aiAudioBlob);
+
+      console.log('✅ Audio blob created:', {
+        size: aiAudioBlob.size,
+        type: aiAudioBlob.type,
+        url: aiAudioUrl
+      });
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
         content: data.text || '🔊 Voice response',
         timestamp: new Date(),
-        audioUrl: data.audioUrl,
+        audioUrl: aiAudioUrl,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -412,6 +452,18 @@ export default function ChatPage() {
             </div>
             <span className="user-name">{sessionData.customer.name}</span>
           </div>
+
+          {/* Back to Agent Profile Button */}
+          <a 
+            href={sessionData.url} 
+            className="back-to-agent-button"
+            title={`Back to ${sessionData.agent.name}'s profile`}
+          >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="back-icon">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Back</span>
+          </a>
         </div>
       </header>
 
