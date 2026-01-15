@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Message } from '../types/chat';
 import VoiceRecorder from '../components/VoiceRecorder';
 import ChatMessages from '../components/ChatMessages';
+import ThemeToggle from '../components/ThemeToggle';
 
 interface SessionData {
   status: boolean;
@@ -200,14 +201,15 @@ export default function ChatPage() {
 
       console.log('📡 Sending request to /api/chat...');
       const startTime = Date.now();
-      setTimeout(() => {
+      const processingTimeout = setTimeout(() => {
         setIsProcessing(true);
       }, getRandomDelay(10000, 18000)); 
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
       });
-
+      clearTimeout(processingTimeout);
       const duration = Date.now() - startTime;
       console.log(`📡 Response received in ${duration}ms with status ${response.status}`);
 
@@ -336,6 +338,7 @@ export default function ChatPage() {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsProcessing(false);
+      setIsTyping(false); // Also clear typing state
       console.log('========================================');
     }
   };
@@ -460,9 +463,19 @@ export default function ChatPage() {
 
       {/* Clean Header with Agent Profile */}
       {/* Clean Header with Agent Profile and User Info */}
-      <header className="chat-header">
+     <header className="chat-header">
         <div className="header-content">
           <div className="header-left">
+            <a 
+              href={sessionData.url} 
+              className="back-icon-btn"
+              title="Back to profile"
+            >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </a>
+            
             {sessionData.agent.operator_profile_image ? (
               <img 
                 src={sessionData.agent.operator_profile_image} 
@@ -491,16 +504,7 @@ export default function ChatPage() {
               </div>
             </div>
             
-            <a 
-              href={sessionData.url} 
-              className="back-link"
-              title="Back to profile"
-            >
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span>Back to Profile</span>
-            </a>
+            <ThemeToggle />
           </div>
         </div>
       </header>
@@ -582,14 +586,14 @@ export default function ChatPage() {
               </div>
             )}
             
-            {isProcessing && !isTyping && (
+            {(isProcessing || isTyping) && (
                 <div className="processing-indicator">
-                  <div className="processing-dots">
+                  {/* <div className="processing-dots">
                     <div className="processing-dot"></div>
                     <div className="processing-dot"></div>
                     <div className="processing-dot"></div>
                   </div>
-                  <span>Typing...</span>
+                  <span>Typing...</span> */}
                 </div>
               )}
           </div>

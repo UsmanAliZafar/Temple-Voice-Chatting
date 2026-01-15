@@ -50,7 +50,8 @@ export async function POST(request: NextRequest) {
     console.log('   - Domain:', domain);
 
     // IMPORTANT: Send the converted key WITH SLASHES to the API
-    const apiUrl = `https://templeoracle.site/api/ai/get-info/${convertedKey}`;
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiUrl = `${baseUrl}/get-info/${convertedKey}`;
     console.log('📡 Calling API URL:', apiUrl);
     console.log('📡 Landing key being sent:', convertedKey);
 
