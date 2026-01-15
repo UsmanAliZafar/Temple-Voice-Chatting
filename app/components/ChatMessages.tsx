@@ -5,19 +5,36 @@ import { useRef, useState, useEffect } from 'react';
 
 interface ChatMessagesProps {
   messages: Message[];
+  agentName?: string;
+  isTyping?: boolean;
 }
 
-export default function ChatMessages({ messages }: ChatMessagesProps) {
+export default function ChatMessages({ messages, agentName, isTyping }: ChatMessagesProps) {
   return (
     <>
       {messages.map((message) => (
-        <MessageItem key={message.id} message={message} />
+        <MessageItem key={message.id} message={message} agentName={agentName} />
       ))}
+      {/* Typing Indicator */}
+      {isTyping && (
+        <div className="message message-assistant">
+          <div className="message-content">
+            <div className="message-header">
+              <span className="message-sender">{agentName || 'Operator'}</span>
+            </div>
+            <div className="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
-function MessageItem({ message }: { message: Message }) {
+function MessageItem({ message, agentName }: { message: Message; agentName?: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string>('');
@@ -115,18 +132,45 @@ function MessageItem({ message }: { message: Message }) {
 
   const speedOptions = [0.75, 1, 1.25, 1.5, 2];
 
+  // Render status ticks
+  const renderStatusTicks = () => {
+    if (message.type !== 'user') return null;
+    
+    return (
+      <span className="message-status">
+        {message.status === 'sending' && (
+          <svg className="status-icon status-sending" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+          </svg>
+        )}
+        {message.status === 'delivered' && (
+          <svg className="status-icon status-delivered" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+          </svg>
+        )}
+        {message.status === 'seen' && (
+          <svg className="status-icon status-seen" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+            <path d="M10.854 6.646a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L6 10.793l3.646-3.647a.5.5 0 0 1 .708 0z"/>
+          </svg>
+        )}
+      </span>
+    );
+  };
+
   return (
     <div className={`message message-${message.type} ${isErrorMessage ? 'message-error' : ''}`}>
       <div className="message-content">
         <div className="message-header">
           <span className="message-sender">
-            {message.type === 'user' ? 'You' : 'AI'}
+            {message.type === 'user' ? 'You' : agentName || 'Operator'}
           </span>
           <span className="message-time">
             {message.timestamp.toLocaleTimeString([], { 
               hour: '2-digit', 
               minute: '2-digit' 
             })}
+            {renderStatusTicks()}
           </span>
         </div>
         

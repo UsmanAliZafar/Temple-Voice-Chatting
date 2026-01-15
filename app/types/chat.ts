@@ -5,6 +5,7 @@ export interface Message {
   content: string;
   timestamp: Date;
   audioUrl?: string;
+  status?: 'sending' | 'delivered' | 'seen';
 }
 
 export interface ChatState {

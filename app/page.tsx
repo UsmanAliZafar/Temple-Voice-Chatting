@@ -39,7 +39,7 @@ export default function Home() {
           <p>No chat session ID provided in the URL.</p>
           <p className="error-help">
             Please use a valid chat URL like:<br />
-            <code>http://localhost:3000/your-chat-id</code>
+            <code>{process.env.NEXT_PUBLIC_CHAT_SITE_URL}/your-chat-id</code>
           </p>
         </div>
       </main>

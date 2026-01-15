@@ -29,6 +29,11 @@ interface ErrorResponse {
   message: string;
 }
 
+// Helper function for random delays
+const getRandomDelay = (min: number, max: number) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
 export default function ChatPage() {
   const params = useParams();
   const landing_key = params.landing_key as string;
@@ -42,6 +47,7 @@ export default function ChatPage() {
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [errorType, setErrorType] = useState<'expired' | 'error' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const backUrl = process.env.NEXT_PUBLIC_BACK_URL_SESSION_EXPIRED || 'https://phonetalktemple.com';
@@ -127,7 +133,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isTyping]);
 
   const handleVoiceData = async (audioBlob: Blob) => {
     if (!sessionData) {
@@ -143,7 +149,7 @@ export default function ChatPage() {
     console.log('Audio blob size:', audioBlob.size, 'bytes');
     console.log('========================================');
     
-    setIsProcessing(true);
+    
 
     const userAudioUrl = URL.createObjectURL(audioBlob);
 
@@ -153,17 +159,50 @@ export default function ChatPage() {
       content: '🎤 Voice message',
       timestamp: new Date(),
       audioUrl: userAudioUrl,
+      status: 'sending',
     };
     setMessages(prev => [...prev, userMessage]);
 
+    // Simulate delivery status (3-7 seconds)
+    const deliveryDelay = getRandomDelay(12000, 20000);
+    setTimeout(() => {
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === userMessage.id 
+            ? { ...msg, status: 'delivered' as const }
+            : msg
+        )
+      );
+      console.log(`✅ Message delivered after ${deliveryDelay}ms`);
+    }, deliveryDelay);
+
+    // Simulate seen status (10-20 seconds)
+    const seenDelay = getRandomDelay(15000, 20000);
+    setTimeout(() => {
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === userMessage.id 
+            ? { ...msg, status: 'seen' as const }
+            : msg
+        )
+      );
+      console.log(`✅ Message seen after ${seenDelay}ms`);
+    }, seenDelay);
+
     try {
+      const apiDelay = getRandomDelay(5000, 10000); // 5-10 seconds
+      console.log(`⏳ Waiting ${apiDelay}ms before sending to API...`);
+      await new Promise(resolve => setTimeout(resolve, apiDelay));
+
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.mp3');
       formData.append('session_id', sessionData.session_id);
 
       console.log('📡 Sending request to /api/chat...');
       const startTime = Date.now();
-      
+      setTimeout(() => {
+        setIsProcessing(true);
+      }, getRandomDelay(10000, 18000)); 
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
@@ -245,6 +284,12 @@ export default function ChatPage() {
         throw new Error('No audio data in response');
       }
 
+      // Show typing indicator (2-5 seconds before response)
+      const typingDelay = getRandomDelay(2000, 5000);
+      setIsTyping(true);
+      await new Promise(resolve => setTimeout(resolve, typingDelay));
+      setIsTyping(false);
+
       console.log('✅ Successfully received audio response');
       console.log('Converting base64 to blob...');
 
@@ -272,6 +317,8 @@ export default function ChatPage() {
       console.log('========================================');
       
     } catch (error: any) {
+      setIsTyping(false); // Hide typing on error
+      
       if (error.message.includes('fetch') || 
           error.message.includes('network') ||
           error.message.includes('Invalid response')) {
@@ -532,7 +579,11 @@ export default function ChatPage() {
           <div className="messages-area">
             {messages.length > 0 ? (
               <div className="messages-list">
-                <ChatMessages messages={messages} />
+                <ChatMessages 
+                  messages={messages} 
+                  agentName={sessionData.agent.name}
+                  isTyping={isTyping}
+                />
                 <div ref={messagesEndRef} />
               </div>
             ) : (
@@ -541,16 +592,16 @@ export default function ChatPage() {
               </div>
             )}
             
-            {isProcessing && (
-              <div className="processing-indicator">
-                <div className="processing-dots">
-                  <div className="processing-dot"></div>
-                  <div className="processing-dot"></div>
-                  <div className="processing-dot"></div>
+            {isProcessing && !isTyping && (
+                <div className="processing-indicator">
+                  <div className="processing-dots">
+                    <div className="processing-dot"></div>
+                    <div className="processing-dot"></div>
+                    <div className="processing-dot"></div>
+                  </div>
+                  <span>Typing...</span>
                 </div>
-                <span>Processing...</span>
-              </div>
-            )}
+              )}
           </div>
 
           {/* Voice Recorder Section */}
