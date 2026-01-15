@@ -2,7 +2,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { Message } from '../types/chat';
+import { Message, ChatHistoryItem } from '../types/chat';
 import VoiceRecorder from '../components/VoiceRecorder';
 import ChatMessages from '../components/ChatMessages';
 import ThemeToggle from '../components/ThemeToggle';
@@ -52,9 +52,10 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isEndingChat, setIsEndingChat] = useState(false);
   const [showEndChatModal, setShowEndChatModal] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const chatSiteUrl = process.env.NEXT_PUBLIC_CHAT_SITE_URL || 'https://phonetalktemple.com';
-
   const backUrl = process.env.NEXT_PUBLIC_BACK_URL_SESSION_EXPIRED || 'https://phonetalktemple.com';
 
   // Helper function to convert base64 to blob URL
@@ -128,6 +129,89 @@ export default function ChatPage() {
     }
   };
 
+  // Load chat history
+  const loadChatHistory = async () => {
+    if (!sessionData || historyLoaded) return;
+
+    try {
+      setIsLoadingHistory(true);
+      console.log('📜 Loading chat history for session:', sessionData.session_id);
+
+      const response = await fetch('/api/load-chat-history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionData.session_id
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        console.error('❌ Failed to load chat history:', data.error);
+        setHistoryLoaded(true); // Mark as loaded even if failed to prevent retry
+        return;
+      }
+
+      if (data.chatHistory && data.chatHistory.length > 0) {
+        console.log('✅ Loaded', data.chatHistory.length, 'history items');
+
+        // Convert chat history to messages
+        const historyMessages: Message[] = [];
+
+        data.chatHistory.forEach((item: ChatHistoryItem) => {
+          // If audio_message exists and audio_reply is empty, it's a USER message
+          if (item.audio_message && !item.audio_reply) {
+            historyMessages.push({
+              id: `history-${item.id}-user`,
+              type: 'user',
+              content: '🎤 Voice message',
+              timestamp: new Date(item.created_at),
+              audioUrl: item.audio_message,
+              status: 'seen',
+              isHistorical: true
+            });
+          }
+
+          // If audio_reply exists, it's an ASSISTANT message
+          if (item.audio_reply) {
+            historyMessages.push({
+              id: `history-${item.id}-assistant`,
+              type: 'assistant',
+              content: '🔊 Voice response',
+              timestamp: new Date(item.created_at),
+              audioUrl: item.audio_reply,
+              isHistorical: true
+            });
+          }
+        });
+
+        // API sends ASC (old to new), so we can directly set them
+        setMessages(historyMessages);
+        setHistoryLoaded(true);
+        console.log('✅ Chat history loaded and displayed:', historyMessages.length, 'messages');
+      } else {
+        console.log('ℹ️ No chat history found');
+        setHistoryLoaded(true);
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error loading chat history:', error);
+      setHistoryLoaded(true); // Mark as loaded even if failed
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  // Load history after session data is loaded
+  useEffect(() => {
+    if (sessionData && !historyLoaded && !isLoadingHistory) {
+      loadChatHistory();
+    }
+  }, [sessionData, historyLoaded, isLoadingHistory]);
+
   const handleGoBack = () => {
     window.location.href = backUrl;
   };
@@ -149,12 +233,11 @@ export default function ChatPage() {
     console.log('========================================');
     console.log('🎤 FRONTEND: Starting voice data processing');
     console.log('Session ID:', sessionData.session_id);
+    console.log('Current messages count:', messages.length);
     console.log('Customer:', sessionData.customer.name);
     console.log('Agent:', sessionData.agent.name);
     console.log('Audio blob size:', audioBlob.size, 'bytes');
     console.log('========================================');
-    
-    
 
     const userAudioUrl = URL.createObjectURL(audioBlob);
 
@@ -165,10 +248,13 @@ export default function ChatPage() {
       timestamp: new Date(),
       audioUrl: userAudioUrl,
       status: 'sending',
+      isHistorical: false,
     };
+    
+    // Append to existing messages (including history)
     setMessages(prev => [...prev, userMessage]);
 
-    // Simulate delivery status (3-7 seconds)
+    // Simulate delivery status (12-20 seconds)
     const deliveryDelay = getRandomDelay(12000, 20000);
     setTimeout(() => {
       setMessages(prev => 
@@ -181,7 +267,7 @@ export default function ChatPage() {
       console.log(`✅ Message delivered after ${deliveryDelay}ms`);
     }, deliveryDelay);
 
-    // Simulate seen status (10-20 seconds)
+    // Simulate seen status (15-20 seconds)
     const seenDelay = getRandomDelay(15000, 20000);
     setTimeout(() => {
       setMessages(prev => 
@@ -213,7 +299,9 @@ export default function ChatPage() {
         method: 'POST',
         body: formData,
       });
+      
       clearTimeout(processingTimeout);
+      
       const duration = Date.now() - startTime;
       console.log(`📡 Response received in ${duration}ms with status ${response.status}`);
 
@@ -291,6 +379,7 @@ export default function ChatPage() {
       }
 
       // Show typing indicator (2-5 seconds before response)
+      setIsProcessing(false);
       const typingDelay = getRandomDelay(2000, 5000);
       setIsTyping(true);
       await new Promise(resolve => setTimeout(resolve, typingDelay));
@@ -316,14 +405,17 @@ export default function ChatPage() {
         content: data.text || '🔊 Voice response',
         timestamp: new Date(),
         audioUrl: aiAudioUrl,
+        isHistorical: false
       };
 
+      // Append to existing messages
       setMessages(prev => [...prev, assistantMessage]);
       console.log('✅ Processing completed successfully');
       console.log('========================================');
       
     } catch (error: any) {
-      setIsTyping(false); // Hide typing on error
+      setIsTyping(false);
+      setIsProcessing(false);
       
       if (error.message.includes('fetch') || 
           error.message.includes('network') ||
@@ -338,16 +430,16 @@ export default function ChatPage() {
         type: 'assistant',
         content: error.message || 'Sorry, something went wrong. Please try again.',
         timestamp: new Date(),
+        isHistorical: false
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsProcessing(false);
-      setIsTyping(false); // Also clear typing state
+      setIsTyping(false);
       console.log('========================================');
     }
   };
 
-  // Add this function before the return statement
   const handleEndChat = async () => {
     if (!sessionData) return;
 
@@ -369,17 +461,18 @@ export default function ChatPage() {
 
       if (data.success) {
         console.log('✅ Chat ended successfully');
-        // Redirect to chat site
         window.location.href = chatSiteUrl;
       } else {
         console.error('❌ Failed to end chat:', data.error);
         setError('Failed to end chat. Please try again.');
         setIsEndingChat(false);
+        setShowEndChatModal(false);
       }
     } catch (error: any) {
       console.error('❌ Error ending chat:', error);
       setError('Failed to end chat. Please try again.');
       setIsEndingChat(false);
+      setShowEndChatModal(false);
     }
   };
 
@@ -509,7 +602,7 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Clean Header with Agent Profile */}
+      {/* Header */}
       <header className="chat-header">
         <div className="header-content">
           <div className="header-left">
@@ -550,7 +643,6 @@ export default function ChatPage() {
               </div>
             </div>
             
-            {/* End Chat Button */}
             <button 
               onClick={openEndChatModal}
               className="end-chat-btn"
@@ -567,10 +659,11 @@ export default function ChatPage() {
           </div>
         </div>
       </header>
+
       {/* Main Content */}
       <main className="main-container">
-        {/* Welcome Section */}
-        {messages.length === 0 && (
+        {/* Welcome Section - Only show if no messages and not loading history */}
+        {messages.length === 0 && !isLoadingHistory && (
           <div className="welcome-section">
             <div className="welcome-icon">
               {sessionData.agent.operator_profile_image ? (
@@ -630,8 +723,20 @@ export default function ChatPage() {
         <div className="chat-container">
           {/* Messages Area */}
           <div className="messages-area">
-            {messages.length > 0 ? (
+            {isLoadingHistory ? (
+              <div className="loading-history">
+                <div className="spinner"></div>
+                <p>Loading chat history...</p>
+              </div>
+            ) : messages.length > 0 ? (
               <div className="messages-list">
+                {/* Show history divider if we have historical messages */}
+                {historyLoaded && messages.some(m => m.isHistorical) && (
+                  <div className="history-divider">
+                    <span>Previous Messages</span>
+                  </div>
+                )}
+                
                 <ChatMessages 
                   messages={messages} 
                   agentName={sessionData.agent.name}
@@ -646,15 +751,10 @@ export default function ChatPage() {
             )}
             
             {(isProcessing || isTyping) && (
-                <div className="processing-indicator">
-                  {/* <div className="processing-dots">
-                    <div className="processing-dot"></div>
-                    <div className="processing-dot"></div>
-                    <div className="processing-dot"></div>
-                  </div>
-                  <span>Typing...</span> */}
-                </div>
-              )}
+              <div className="processing-indicator">
+                {/* Typing indicator handled in ChatMessages component */}
+              </div>
+            )}
           </div>
 
           {/* Voice Recorder Section */}
@@ -663,15 +763,10 @@ export default function ChatPage() {
               onVoiceData={handleVoiceData}
               isRecording={isRecording}
               setIsRecording={setIsRecording}
-              disabled={isProcessing || isSessionExpired}
+              disabled={isProcessing || isSessionExpired || isLoadingHistory}
             />
           </div>
         </div>
-
-        {/* Footer Info */}
-        {/* <div className="footer-info">
-          <p>Session: {sessionData.session_id}</p>
-        </div> */}
       </main>
 
       {/* End Chat Confirmation Modal */}
