@@ -344,17 +344,11 @@ export default function ChatPage() {
   if (isLoading) {
     return (
       <div>
-        <header className="header">
-          <div className="header-container">
-            <div className="header-logo">
-              <div className="logo-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-              <div className="logo-text">
-                <h1>VoiceChat AI</h1>
-                <p>Loading session...</p>
+        <header className="chat-header">
+          <div className="header-content">
+            <div className="header-left">
+              <div className="agent-profile-loading">
+                <div className="spinner-small"></div>
               </div>
             </div>
           </div>
@@ -374,18 +368,11 @@ export default function ChatPage() {
   if (isSessionExpired && errorType === 'expired') {
     return (
       <div>
-        <header className="header">
-          <div className="header-container">
-            <div className="header-logo">
-              <div className="logo-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-              <div className="logo-text">
-                <h1>VoiceChat AI</h1>
-                <p>Session Expired</p>
-              </div>
+        <header className="chat-header">
+          <div className="header-content">
+            <div className="header-left">
+              <div className="expired-icon-small">⏰</div>
+              <span className="header-title">Session Expired</span>
             </div>
           </div>
         </header>
@@ -415,18 +402,11 @@ export default function ChatPage() {
   if (error || !sessionData) {
     return (
       <div>
-        <header className="header">
-          <div className="header-container">
-            <div className="header-logo">
-              <div className="logo-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-              <div className="logo-text">
-                <h1>VoiceChat AI</h1>
-                <p>Session Error</p>
-              </div>
+        <header className="chat-header">
+          <div className="header-content">
+            <div className="header-left">
+              <div className="error-icon-small">⚠️</div>
+              <span className="header-title">Error</span>
             </div>
           </div>
         </header>
@@ -478,42 +458,52 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Header with User Info */}
-      <header className="header">
-        <div className="header-container">
-          <div className="header-logo">
-            <div className="logo-icon">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
+      {/* Clean Header with Agent Profile */}
+      {/* Clean Header with Agent Profile and User Info */}
+      <header className="chat-header">
+        <div className="header-content">
+          <div className="header-left">
+            {sessionData.agent.operator_profile_image ? (
+              <img 
+                src={sessionData.agent.operator_profile_image} 
+                alt={sessionData.agent.name}
+                className="agent-avatar"
+              />
+            ) : (
+              <div className="agent-avatar-placeholder">
+                {sessionData.agent.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="agent-info">
+              <h1 className="agent-name">{sessionData.agent.name}</h1>
+              <span className="agent-status">Online</span>
             </div>
-            <div className="logo-text">
-              <h1>VoiceChat AI</h1>
-              <p>Chatting with {sessionData.agent.name}</p>
-            </div>
-          </div>
-          
-          <div className="user-info">
-            <div className="user-avatar-placeholder">
-              {sessionData.customer.name.charAt(0).toUpperCase()}
-            </div>
-            <span className="user-name">{sessionData.customer.name}</span>
           </div>
 
-          {/* Back to Agent Profile Button */}
-          <a 
-            href={sessionData.url} 
-            className="back-to-agent-button"
-            title={`Back to ${sessionData.agent.name}'s profile`}
-          >
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="back-icon">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            <span>Back</span>
-          </a>
+          <div className="header-right">
+            <div className="user-profile">
+              <div className="user-avatar-header">
+                {sessionData.customer.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="user-info-header">
+                <span className="user-name-header">You: {sessionData.customer.name}</span>
+                {/* <span className="user-email-header">{sessionData.customer.email}</span> */}
+              </div>
+            </div>
+            
+            <a 
+              href={sessionData.url} 
+              className="back-link"
+              title="Back to profile"
+            >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>Back to Profile</span>
+            </a>
+          </div>
         </div>
       </header>
-
       {/* Main Content */}
       <main className="main-container">
         {/* Welcome Section */}
@@ -618,9 +608,6 @@ export default function ChatPage() {
         {/* Footer Info */}
         <div className="footer-info">
           <p>Session: {sessionData.session_id}</p>
-          <a href={sessionData.url} target="_blank" rel="noopener noreferrer" className="agent-link">
-            View Agent Profile
-          </a>
         </div>
       </main>
     </div>
