@@ -50,6 +50,10 @@ export default function ChatPage() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isEndingChat, setIsEndingChat] = useState(false);
+  const [showEndChatModal, setShowEndChatModal] = useState(false);
+
+  const chatSiteUrl = process.env.NEXT_PUBLIC_CHAT_SITE_URL || 'https://phonetalktemple.com';
 
   const backUrl = process.env.NEXT_PUBLIC_BACK_URL_SESSION_EXPIRED || 'https://phonetalktemple.com';
 
@@ -343,6 +347,50 @@ export default function ChatPage() {
     }
   };
 
+  // Add this function before the return statement
+  const handleEndChat = async () => {
+    if (!sessionData) return;
+
+    try {
+      setIsEndingChat(true);
+      console.log('🔚 Ending chat session:', sessionData.session_id);
+
+      const response = await fetch('/api/end-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: sessionData.session_id
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('✅ Chat ended successfully');
+        // Redirect to chat site
+        window.location.href = chatSiteUrl;
+      } else {
+        console.error('❌ Failed to end chat:', data.error);
+        setError('Failed to end chat. Please try again.');
+        setIsEndingChat(false);
+      }
+    } catch (error: any) {
+      console.error('❌ Error ending chat:', error);
+      setError('Failed to end chat. Please try again.');
+      setIsEndingChat(false);
+    }
+  };
+
+  const openEndChatModal = () => {
+    setShowEndChatModal(true);
+  };
+
+  const closeEndChatModal = () => {
+    setShowEndChatModal(false);
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -462,8 +510,7 @@ export default function ChatPage() {
       )}
 
       {/* Clean Header with Agent Profile */}
-      {/* Clean Header with Agent Profile and User Info */}
-     <header className="chat-header">
+      <header className="chat-header">
         <div className="header-content">
           <div className="header-left">
             <a 
@@ -500,9 +547,21 @@ export default function ChatPage() {
               </div>
               <div className="user-info-header">
                 <span className="user-name-header">You: {sessionData.customer.name}</span>
-                {/* <span className="user-email-header">{sessionData.customer.email}</span> */}
               </div>
             </div>
+            
+            {/* End Chat Button */}
+            <button 
+              onClick={openEndChatModal}
+              className="end-chat-btn"
+              disabled={isEndingChat}
+              title="End Chat"
+            >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              End Chat
+            </button>
             
             <ThemeToggle />
           </div>
@@ -610,10 +669,49 @@ export default function ChatPage() {
         </div>
 
         {/* Footer Info */}
-        <div className="footer-info">
+        {/* <div className="footer-info">
           <p>Session: {sessionData.session_id}</p>
-        </div>
+        </div> */}
       </main>
+
+      {/* End Chat Confirmation Modal */}
+      {showEndChatModal && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-icon-warning">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2>End Chat Session?</h2>
+            <p>Are you sure you want to end this chat? This action cannot be undone.</p>
+            
+            <div className="modal-actions">
+              <button 
+                onClick={closeEndChatModal}
+                className="modal-btn-cancel"
+                disabled={isEndingChat}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleEndChat}
+                className="modal-btn-confirm"
+                disabled={isEndingChat}
+              >
+                {isEndingChat ? (
+                  <>
+                    <div className="spinner-small"></div>
+                    Ending...
+                  </>
+                ) : (
+                  'Yes, End Chat'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
