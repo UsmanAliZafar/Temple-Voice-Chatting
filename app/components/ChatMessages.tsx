@@ -8,7 +8,6 @@ interface ChatMessagesProps {
   agentName?: string;
   isTyping?: boolean;
 }
-
 export default function ChatMessages({ messages, agentName, isTyping }: ChatMessagesProps) {
   return (
     <>
