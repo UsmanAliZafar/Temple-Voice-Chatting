@@ -11,11 +11,11 @@ interface VoiceRecorderProps {
   disabled?: boolean;
 }
 
-export default function VoiceRecorder({ 
-  onVoiceData, 
-  isRecording, 
+export default function VoiceRecorder({
+  onVoiceData,
+  isRecording,
   setIsRecording,
-  disabled = false 
+  disabled = false
 }: VoiceRecorderProps) {
   const [recordingTime, setRecordingTime] = useState(0);
   const [error, setError] = useState<string>('');
@@ -66,32 +66,32 @@ export default function VoiceRecorder({
       const audioContext = new AudioContext();
       const analyser = audioContext.createAnalyser();
       const microphone = audioContext.createMediaStreamSource(stream);
-      
+
       analyser.fftSize = 256;
       microphone.connect(analyser);
-      
+
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
-      
+
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      
+
       const checkAudioLevel = () => {
         if (!analyserRef.current) return;
-        
+
         analyserRef.current.getByteFrequencyData(dataArray);
-        
+
         // Calculate average volume
         const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
         setAudioLevel(average);
-        
+
         // If average volume is above threshold, we have audio input
         if (average > 5) { // Threshold for detecting audio
           hasAudioInputRef.current = true;
         }
-        
+
         animationFrameRef.current = requestAnimationFrame(checkAudioLevel);
       };
-      
+
       checkAudioLevel();
     } catch (error) {
       console.error('Failed to start audio monitoring:', error);
@@ -103,12 +103,12 @@ export default function VoiceRecorder({
       cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
-    
+
     if (audioContextRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }
-    
+
     analyserRef.current = null;
     setAudioLevel(0);
   };
@@ -156,7 +156,7 @@ export default function VoiceRecorder({
       console.log('✅ Conversion complete');
 
       const data = await ffmpeg.readFile('output.mp3');
-      const mp3Blob = new Blob([data], { type: 'audio/mpeg' });
+      const mp3Blob = new Blob([data as unknown as BlobPart], { type: 'audio/mpeg' });
       console.log('✅ MP3 blob created:', mp3Blob.size, 'bytes');
 
       await ffmpeg.deleteFile('input.webm');
@@ -183,32 +183,32 @@ export default function VoiceRecorder({
 
   const startRecording = async () => {
     if (disabled || isRecording || !ffmpegLoaded) return;
-    
+
     try {
       setError('');
       hasAudioInputRef.current = false; // Reset audio detection
       console.log('Requesting microphone access...');
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           sampleRate: 44100,
-        } 
+        }
       });
-      
+
       streamRef.current = stream;
       console.log('Microphone access granted');
-      
+
       // Start monitoring audio levels
       startAudioLevelMonitoring(stream);
-      
+
       const mimeTypes = [
         'audio/webm;codecs=opus',
         'audio/webm',
         'audio/ogg;codecs=opus',
       ];
-      
+
       let selectedMimeType = '';
       for (const type of mimeTypes) {
         if (MediaRecorder.isTypeSupported(type)) {
@@ -217,7 +217,7 @@ export default function VoiceRecorder({
           break;
         }
       }
-      
+
       const options = selectedMimeType ? { mimeType: selectedMimeType } : {};
       const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
@@ -232,18 +232,18 @@ export default function VoiceRecorder({
 
       mediaRecorder.onstop = async () => {
         console.log('Recording stopped, chunks:', chunksRef.current.length);
-        
+
         // Stop audio monitoring
         stopAudioLevelMonitoring();
-        
+
         if (chunksRef.current.length > 0) {
           const mimeType = selectedMimeType || 'audio/webm';
           const webmBlob = new Blob(chunksRef.current, { type: mimeType });
           console.log('Created WebM blob:', webmBlob.size, 'bytes');
-          
+
           // Validate audio content
           const isValid = await validateAudioContent(webmBlob);
-          
+
           if (!isValid) {
             setError('No audio detected. Please check your microphone and make sure it\'s not muted.');
             console.error('❌ Audio validation failed');
@@ -251,7 +251,7 @@ export default function VoiceRecorder({
             try {
               // Convert to MP3
               const mp3Blob = await convertToMp3(webmBlob);
-              
+
               // Double-check MP3 size
               if (mp3Blob.size < 1000) {
                 setError('Recorded audio is too short or empty. Please try again.');
@@ -266,7 +266,7 @@ export default function VoiceRecorder({
         } else {
           setError('Recording failed: no audio chunks captured');
         }
-        
+
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
@@ -290,16 +290,16 @@ export default function VoiceRecorder({
       timerRef.current = setInterval(() => {
         time += 1;
         setRecordingTime(time);
-        
+
         // Warn user if no audio detected after 3 seconds
         if (time === 3 && !hasAudioInputRef.current) {
           console.warn('⚠️ No audio detected after 3 seconds');
         }
       }, 1000);
-      
+
     } catch (error: any) {
       console.error('Error accessing microphone:', error);
-      
+
       if (error.name === 'NotAllowedError') {
         setError('Microphone access denied. Please allow microphone permissions.');
       } else if (error.name === 'NotFoundError') {
@@ -312,10 +312,10 @@ export default function VoiceRecorder({
 
   const stopRecording = () => {
     console.log('Stopping recording...');
-    
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      
+
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -371,8 +371,8 @@ export default function VoiceRecorder({
             Recording: {formatTime(recordingTime)}
           </span>
           <div className="audio-level-container">
-            <div 
-              className="audio-level-bar" 
+            <div
+              className="audio-level-bar"
               style={{ width: `${Math.min(audioLevel * 2, 100)}%` }}
             />
           </div>
@@ -405,15 +405,15 @@ export default function VoiceRecorder({
 
       {/* Instructions */}
       <p className="recorder-instructions">
-        {!ffmpegLoaded 
+        {!ffmpegLoaded
           ? 'Loading...'
           : isConverting
-          ? 'Converting audio...'
-          : isRecording 
-          ? 'Click again to stop and send'
-          : disabled
-          ? 'Please wait...'
-          : 'Click to start recording'
+            ? 'Converting audio...'
+            : isRecording
+              ? 'Click again to stop and send'
+              : disabled
+                ? 'Please wait...'
+                : 'Click to start recording'
         }
       </p>
     </div>
