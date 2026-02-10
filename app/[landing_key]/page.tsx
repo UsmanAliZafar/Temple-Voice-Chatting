@@ -648,13 +648,8 @@ export default function ChatPage() {
           </div>
 
           <div className="header-right">
-            <div className="user-profile">
-              <div className="user-avatar-header">
-                {sessionData.customer.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="user-info-header">
-                <span className="user-name-header">You: {sessionData.customer.name}</span>
-              </div>
+            <div className="user-profile" style={{ background: "unset", border: "unset" }}>
+              Hi, {sessionData.customer.name}
             </div>
 
             <button
@@ -676,63 +671,6 @@ export default function ChatPage() {
 
       {/* Main Content */}
       <main className="main-container">
-        {/* Welcome Section - Only show if no messages and not loading history */}
-        {messages.length === 0 && !isLoadingHistory && (
-          <div className="welcome-section">
-            <div className="welcome-icon">
-              {sessionData.agent.operator_profile_image ? (
-                <img
-                  src={sessionData.agent.operator_profile_image}
-                  alt={sessionData.agent.name}
-                  className="agent-avatar-large-image"
-                />
-              ) : (
-                <div className="agent-avatar-large">
-                  {sessionData.agent.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-            <h2>Chat with {sessionData.agent.name}</h2>
-            <p>
-              Press the microphone button below to start a conversation.
-              Speak naturally and I'll respond with text and voice.
-            </p>
-
-            {/* Feature Cards */}
-            <div className="feature-cards">
-              <div className="feature-card">
-                <div className="feature-icon indigo">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <h3>Instant Response</h3>
-                <p>Get quick answers to your questions with real-time voice processing</p>
-              </div>
-
-              <div className="feature-card">
-                <div className="feature-icon purple">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3>Natural Language</h3>
-                <p>Speak naturally as you would in a normal conversation</p>
-              </div>
-
-              <div className="feature-card">
-                <div className="feature-icon pink">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                  </svg>
-                </div>
-                <h3>Smart AI</h3>
-                <p>Powered by advanced AI for intelligent conversations</p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Chat Container */}
         <div className="chat-container">
           {/* Messages Area */}
