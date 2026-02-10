@@ -461,7 +461,7 @@ export default function ChatPage() {
 
       if (data.success) {
         console.log('✅ Chat ended successfully');
-        window.location.href = sessionData.url;
+        window.location.href = sessionData.url + "?end=session";
       } else {
         console.error('❌ Failed to end chat:', data.error);
         setError('Failed to end chat. Please try again.');
