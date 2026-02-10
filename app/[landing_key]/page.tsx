@@ -63,11 +63,11 @@ export default function ChatPage() {
     const cleanBase64 = base64.replace(/\s/g, '');
     const byteCharacters = atob(cleanBase64);
     const byteNumbers = new Array(byteCharacters.length);
-    
+
     for (let i = 0; i < byteCharacters.length; i++) {
       byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
-    
+
     const byteArray = new Uint8Array(byteNumbers);
     return new Blob([byteArray], { type: mimeType });
   };
@@ -85,9 +85,9 @@ export default function ChatPage() {
       setError('');
       setIsSessionExpired(false);
       setErrorType(null);
-      
+
       console.log('Fetching session data for:', landing_key);
-      
+
       const response = await fetch(`/api/get-session-info`, {
         method: 'POST',
         headers: {
@@ -95,7 +95,7 @@ export default function ChatPage() {
         },
         body: JSON.stringify({ landing_key }),
       });
-      
+
       const data = await response.json();
 
       // Check if session is expired
@@ -111,7 +111,7 @@ export default function ChatPage() {
       if (!response.ok) {
         throw new Error(data.message || 'Failed to fetch session data');
       }
-      
+
       if (!data.status) {
         throw new Error(data.message || 'Invalid session');
       }
@@ -119,7 +119,7 @@ export default function ChatPage() {
       console.log('Session data loaded:', data);
       setSessionData(data);
       setIsLoading(false);
-      
+
     } catch (error: any) {
       console.error('Error fetching session data:', error);
       setError(error.message || 'Failed to load session');
@@ -250,16 +250,16 @@ export default function ChatPage() {
       status: 'sending',
       isHistorical: false,
     };
-    
+
     // Append to existing messages (including history)
     setMessages(prev => [...prev, userMessage]);
 
     // Simulate delivery status (12-20 seconds)
     const deliveryDelay = getRandomDelay(12000, 20000);
     setTimeout(() => {
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === userMessage.id 
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === userMessage.id
             ? { ...msg, status: 'delivered' as const }
             : msg
         )
@@ -270,9 +270,9 @@ export default function ChatPage() {
     // Simulate seen status (15-20 seconds)
     const seenDelay = getRandomDelay(15000, 20000);
     setTimeout(() => {
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === userMessage.id 
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === userMessage.id
             ? { ...msg, status: 'seen' as const }
             : msg
         )
@@ -293,15 +293,15 @@ export default function ChatPage() {
       const startTime = Date.now();
       const processingTimeout = setTimeout(() => {
         setIsProcessing(true);
-      }, getRandomDelay(10000, 18000)); 
+      }, getRandomDelay(10000, 18000));
 
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
       });
-      
+
       clearTimeout(processingTimeout);
-      
+
       const duration = Date.now() - startTime;
       console.log(`📡 Response received in ${duration}ms with status ${response.status}`);
 
@@ -336,16 +336,16 @@ export default function ChatPage() {
           message: data.message,
           details: data.details
         });
-        
+
         let errorMessage = 'Sorry, there was an error processing your message.';
-        
+
         if (data.message) {
-          if (data.message.includes('missing') || 
-              data.message.includes('audio file was not received') ||
-              data.message.includes('Field required')) {
+          if (data.message.includes('missing') ||
+            data.message.includes('audio file was not received') ||
+            data.message.includes('Field required')) {
             errorMessage = '🎤 Audio not detected. Please check your microphone and try again.';
-          } else if (data.message.includes('too small') || 
-                    data.message.includes('empty')) {
+          } else if (data.message.includes('too small') ||
+            data.message.includes('empty')) {
             errorMessage = '🎤 Recording is too short. Please speak longer and try again.';
           } else if (data.message.includes('Validation error')) {
             errorMessage = '⚠️ Invalid audio format. Please try recording again.';
@@ -363,7 +363,7 @@ export default function ChatPage() {
         } else if (response.status === 400) {
           errorMessage = '⚠️ Invalid request. Please try recording again.';
         }
-        
+
         throw new Error(errorMessage);
       }
 
@@ -412,19 +412,19 @@ export default function ChatPage() {
       setMessages(prev => [...prev, assistantMessage]);
       console.log('✅ Processing completed successfully');
       console.log('========================================');
-      
+
     } catch (error: any) {
       setIsTyping(false);
       setIsProcessing(false);
-      
-      if (error.message.includes('fetch') || 
-          error.message.includes('network') ||
-          error.message.includes('Invalid response')) {
+
+      if (error.message.includes('fetch') ||
+        error.message.includes('network') ||
+        error.message.includes('Invalid response')) {
         console.error('Genuine error occurred:', error);
       } else {
         console.log('User-facing error:', error.message);
       }
-      
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -461,7 +461,7 @@ export default function ChatPage() {
 
       if (data.success) {
         console.log('✅ Chat ended successfully');
-        window.location.href = chatSiteUrl;
+        window.location.href = sessionData.url;
       } else {
         console.error('❌ Failed to end chat:', data.error);
         setError('Failed to end chat. Please try again.');
@@ -606,8 +606,8 @@ export default function ChatPage() {
       <header className="chat-header">
         <div className="header-content">
           <div className="header-left">
-            <a 
-              href={sessionData.url} 
+            <a
+              href={sessionData.url}
               className="back-icon-btn"
               title="Back to profile"
             >
@@ -615,10 +615,10 @@ export default function ChatPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </a>
-            
+
             {sessionData.agent.operator_profile_image ? (
-              <img 
-                src={sessionData.agent.operator_profile_image} 
+              <img
+                src={sessionData.agent.operator_profile_image}
                 alt={sessionData.agent.name}
                 className="agent-avatar"
               />
@@ -642,8 +642,8 @@ export default function ChatPage() {
                 <span className="user-name-header">You: {sessionData.customer.name}</span>
               </div>
             </div>
-            
-            <button 
+
+            <button
               onClick={openEndChatModal}
               className="end-chat-btn"
               disabled={isEndingChat}
@@ -654,7 +654,7 @@ export default function ChatPage() {
               </svg>
               End Chat
             </button>
-            
+
             <ThemeToggle />
           </div>
         </div>
@@ -667,8 +667,8 @@ export default function ChatPage() {
           <div className="welcome-section">
             <div className="welcome-icon">
               {sessionData.agent.operator_profile_image ? (
-                <img 
-                  src={sessionData.agent.operator_profile_image} 
+                <img
+                  src={sessionData.agent.operator_profile_image}
                   alt={sessionData.agent.name}
                   className="agent-avatar-large-image"
                 />
@@ -680,10 +680,10 @@ export default function ChatPage() {
             </div>
             <h2>Chat with {sessionData.agent.name}</h2>
             <p>
-              Press the microphone button below to start a conversation. 
+              Press the microphone button below to start a conversation.
               Speak naturally and I'll respond with text and voice.
             </p>
-            
+
             {/* Feature Cards */}
             <div className="feature-cards">
               <div className="feature-card">
@@ -695,7 +695,7 @@ export default function ChatPage() {
                 <h3>Instant Response</h3>
                 <p>Get quick answers to your questions with real-time voice processing</p>
               </div>
-              
+
               <div className="feature-card">
                 <div className="feature-icon purple">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -705,7 +705,7 @@ export default function ChatPage() {
                 <h3>Natural Language</h3>
                 <p>Speak naturally as you would in a normal conversation</p>
               </div>
-              
+
               <div className="feature-card">
                 <div className="feature-icon pink">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -736,9 +736,9 @@ export default function ChatPage() {
                     <span>Previous Messages</span>
                   </div>
                 )}
-                
-                <ChatMessages 
-                  messages={messages} 
+
+                <ChatMessages
+                  messages={messages}
                   agentName={sessionData.agent.name}
                   isTyping={isTyping}
                 />
@@ -749,7 +749,7 @@ export default function ChatPage() {
                 <p>No messages yet. Start speaking to begin!</p>
               </div>
             )}
-            
+
             {(isProcessing || isTyping) && (
               <div className="processing-indicator">
                 {/* Typing indicator handled in ChatMessages component */}
@@ -759,7 +759,7 @@ export default function ChatPage() {
 
           {/* Voice Recorder Section */}
           <div className="recorder-section">
-            <VoiceRecorder 
+            <VoiceRecorder
               onVoiceData={handleVoiceData}
               isRecording={isRecording}
               setIsRecording={setIsRecording}
@@ -780,16 +780,16 @@ export default function ChatPage() {
             </div>
             <h2>End Chat Session?</h2>
             <p>Are you sure you want to end this chat? This action cannot be undone.</p>
-            
+
             <div className="modal-actions">
-              <button 
+              <button
                 onClick={closeEndChatModal}
                 className="modal-btn-cancel"
                 disabled={isEndingChat}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleEndChat}
                 className="modal-btn-confirm"
                 disabled={isEndingChat}

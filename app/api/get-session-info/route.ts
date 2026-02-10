@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   console.log('========================================');
   console.log('🔑 GET SESSION INFO API CALLED');
   console.log('========================================');
-  
+
   try {
     const { landing_key } = await request.json();
 
@@ -22,32 +22,11 @@ export async function POST(request: NextRequest) {
     // Decode the URL-encoded landing key first
     // %2B becomes + (plus sign)
     const decodedKey = decodeURIComponent(landing_key);
-    console.log('📥 Decoded landing key:', decodedKey);
 
     // Convert plus signs (+) to slashes (/)
     // From: pofadQcwOEQQZ34_ocSO3DeHG1hAxgaAMmlLbf8c4c0+Landing+phonetalktemple.com
     // To:   pofadQcwOEQQZ34_ocSO3DeHG1hAxgaAMmlLbf8c4c0/Landing/phonetalktemple.com
     const convertedKey = decodedKey.replace(/\+/g, '/');
-    
-    console.log('✅ Converted landing key:', convertedKey);
-
-    // Parse the converted key to extract session_id and domain
-    const parts = convertedKey.split('/Landing/');
-    
-    if (parts.length !== 2) {
-      console.error('❌ Invalid landing key format:', convertedKey);
-      return NextResponse.json(
-        { error: 'Invalid landing key format. Expected format: {session_id}+Landing+{domain}' },
-        { status: 400 }
-      );
-    }
-
-    const sessionId = parts[0];
-    const domain = parts[1];
-
-    console.log('✅ Parsed landing key:');
-    console.log('   - Session ID:', sessionId);
-    console.log('   - Domain:', domain);
 
     // IMPORTANT: Send the converted key WITH SLASHES to the API
     const baseUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -68,14 +47,14 @@ export async function POST(request: NextRequest) {
 
     // Check content type before parsing
     const contentType = response.headers.get('content-type');
-    
+
     if (!contentType || !contentType.includes('application/json')) {
       console.error('❌ Response is not JSON, content-type:', contentType);
       const textResponse = await response.text();
       console.error('❌ Response text (first 500 chars):', textResponse.substring(0, 500));
-      
+
       return NextResponse.json(
-        { 
+        {
           error: 'Invalid response from server',
           message: 'Server returned non-JSON response. The session key might be invalid or the server is having issues.',
           details: {
@@ -96,7 +75,7 @@ export async function POST(request: NextRequest) {
     } catch (parseError: any) {
       console.error('❌ Failed to parse JSON response:', parseError.message);
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to parse server response',
           message: 'The server returned invalid JSON data',
           details: parseError.message
@@ -120,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       let errorMessage = `API returned status ${response.status}`;
-      
+
       if (data.message) {
         errorMessage = data.message;
       } else if (data.error) {
@@ -130,7 +109,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ API Error Response:', errorMessage);
 
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to fetch session info',
           message: errorMessage,
           status: response.status
@@ -142,7 +121,7 @@ export async function POST(request: NextRequest) {
     if (!data.status) {
       console.error('❌ Invalid session status');
       return NextResponse.json(
-        { 
+        {
           error: 'Invalid session',
           message: data.message || 'Session is not active or valid'
         },
@@ -170,9 +149,9 @@ export async function POST(request: NextRequest) {
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
     console.error('========================================');
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         message: error.message || 'An unexpected error occurred',
         errorType: error.constructor.name
