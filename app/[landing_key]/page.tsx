@@ -263,40 +263,26 @@ export default function ChatPage() {
     setMessages(prev => [...prev, userMessage]);
 
     const typingDelay = getRandomDelay(1000, 5000);
-    setTimeout(() => {
-      setIsTyping(true);
-    }, typingDelay);
+    setIsTyping(true);
 
     // Simulate delivery status (12-20 seconds)
-    const deliveryDelay = getRandomDelay(12000, 20000);
-    setTimeout(() => {
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === userMessage.id
-            ? { ...msg, status: 'delivered' as const }
-            : msg
-        )
-      );
-      console.log(`✅ Message delivered after ${deliveryDelay}ms`);
-    }, deliveryDelay);
-
+    setMessages(prev =>
+      prev.map(msg =>
+        msg.id === userMessage.id
+          ? { ...msg, status: 'delivered' as const }
+          : msg
+      )
+    );
     // Simulate seen status (15-20 seconds)
-    const seenDelay = getRandomDelay(15000, 20000);
-    setTimeout(() => {
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === userMessage.id
-            ? { ...msg, status: 'seen' as const }
-            : msg
-        )
-      );
-      console.log(`✅ Message seen after ${seenDelay}ms`);
-    }, seenDelay);
+    setMessages(prev =>
+      prev.map(msg =>
+        msg.id === userMessage.id
+          ? { ...msg, status: 'seen' as const }
+          : msg
+      )
+    );
 
     try {
-      const apiDelay = getRandomDelay(5000, 10000); // 5-10 seconds
-      console.log(`⏳ Waiting ${apiDelay}ms before sending to API...`);
-      await new Promise(resolve => setTimeout(resolve, apiDelay));
 
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.mp3');
@@ -304,16 +290,12 @@ export default function ChatPage() {
 
       console.log('📡 Sending request to /api/chat...');
       const startTime = Date.now();
-      const processingTimeout = setTimeout(() => {
-        setIsProcessing(true);
-      }, getRandomDelay(10000, 18000));
+      setIsProcessing(true);
 
       const response = await fetch('/api/chat', {
         method: 'POST',
         body: formData,
       });
-
-      clearTimeout(processingTimeout);
 
       const duration = Date.now() - startTime;
       console.log(`📡 Response received in ${duration}ms with status ${response.status}`);
@@ -393,8 +375,6 @@ export default function ChatPage() {
 
       // Show typing indicator (2-5 seconds before response)
       setIsProcessing(false);
-      const typingDelay = getRandomDelay(2000, 5000);
-      await new Promise(resolve => setTimeout(resolve, typingDelay));
       setIsTyping(false);
 
       console.log('✅ Successfully received audio response');
