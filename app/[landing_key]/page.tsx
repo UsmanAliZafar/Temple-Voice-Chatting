@@ -1,7 +1,7 @@
-// [landing_key]/page.tsx
 'use client';
+
 import { useState, useRef, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Message, ChatHistoryItem } from '../types/chat';
 import VoiceRecorder from '../components/VoiceRecorder';
 import ChatMessages from '../components/ChatMessages';
@@ -37,6 +37,7 @@ const getRandomDelay = (min: number, max: number) => {
 
 export default function ChatPage() {
   const params = useParams();
+  const router = useRouter();
   const landing_key = params.landing_key as string;
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -74,58 +75,65 @@ export default function ChatPage() {
 
   // Fetch session data on mount
   useEffect(() => {
-    if (landing_key) {
-      fetchSessionData();
+    if (landing_key && landing_key != "session") {
+      localStorage.setItem('landing_key', landing_key);
+      router.replace('/session');
     }
-  }, [landing_key]);
+  }, [landing_key, router]);
+
+  useEffect(() => {
+    fetchSessionData();
+  }, []);
 
   const fetchSessionData = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      setIsSessionExpired(false);
-      setErrorType(null);
-
-      console.log('Fetching session data for:', landing_key);
-
-      const response = await fetch(`/api/get-session-info`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ landing_key }),
-      });
-
-      const data = await response.json();
-
-      // Check if session is expired
-      if (!data.status && data.session === 'expired') {
-        console.log('Session expired:', data.message);
-        setIsSessionExpired(true);
-        setErrorType('expired');
-        setErrorMessage(data.message || 'This chat session has been ended. Please start a new session.');
+    const sessionString = localStorage.getItem("session");
+    if (sessionString) {
+      const session = JSON.parse(sessionString) as SessionData;
+      setSessionData(session);
+      setIsLoading(false);
+    } else {
+      try {
+        setIsLoading(true);
+        setError('');
+        setIsSessionExpired(false);
+        setErrorType(null);
+        const landing_key = localStorage.getItem('landing_key');
+        console.log('Fetching session data for:', landing_key);
+        const response = await fetch(`/api/get-session-info`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ landing_key }),
+        });
+        const data = await response.json();
+        // Check if session is expired
+        if (!data.status && data.session === 'expired') {
+          console.log('Session expired:', data.message);
+          setIsSessionExpired(true);
+          setErrorType('expired');
+          setErrorMessage(data.message || 'This chat session has been ended. Please start a new session.');
+          localStorage.removeItem('landing_key');
+          setIsLoading(false);
+          return;
+        }
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to fetch session data');
+        }
+        if (!data.status) {
+          throw new Error(data.message || 'Invalid session');
+        }
+        console.log('Session data loaded:', data);
+        setSessionData(data);
         setIsLoading(false);
-        return;
+        localStorage.setItem("session", JSON.stringify(data));
+      } catch (error: any) {
+        console.error('Error fetching session data:', error);
+        setError(error.message || 'Failed to load session');
+        setErrorType('error');
+        setErrorMessage(error.message || 'Failed to load session');
+        setIsLoading(false);
       }
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch session data');
-      }
-
-      if (!data.status) {
-        throw new Error(data.message || 'Invalid session');
-      }
-
-      console.log('Session data loaded:', data);
-      setSessionData(data);
-      setIsLoading(false);
-
-    } catch (error: any) {
-      console.error('Error fetching session data:', error);
-      setError(error.message || 'Failed to load session');
-      setErrorType('error');
-      setErrorMessage(error.message || 'Failed to load session');
-      setIsLoading(false);
     }
   };
 
@@ -465,6 +473,8 @@ export default function ChatPage() {
 
       if (data.success) {
         console.log('✅ Chat ended successfully');
+        localStorage.removeItem('landing_key');
+        localStorage.removeItem('session');
         window.location.href = sessionData.url + "?end=session";
       } else {
         console.error('❌ Failed to end chat:', data.error);
