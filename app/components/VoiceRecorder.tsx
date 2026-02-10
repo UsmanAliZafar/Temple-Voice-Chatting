@@ -21,6 +21,7 @@ export default function VoiceRecorder({
   const [error, setError] = useState<string>('');
   const [isConverting, setIsConverting] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,7 +56,7 @@ export default function VoiceRecorder({
       setFfmpegLoaded(true);
       console.log('✅ FFmpeg loaded successfully');
     } catch (error) {
-      console.error('Failed to load FFmpeg:', error);
+      // console.error('Failed to load FFmpeg:', error);
       setError('Failed to load audio converter');
     }
   };
@@ -94,7 +95,7 @@ export default function VoiceRecorder({
 
       checkAudioLevel();
     } catch (error) {
-      console.error('Failed to start audio monitoring:', error);
+      // console.error('Failed to start audio monitoring:', error);
     }
   };
 
@@ -186,6 +187,7 @@ export default function VoiceRecorder({
 
     try {
       setError('');
+      setShowCancelConfirm(false);
       hasAudioInputRef.current = false; // Reset audio detection
       console.log('Requesting microphone access...');
 
@@ -244,22 +246,15 @@ export default function VoiceRecorder({
           // Validate audio content
           const isValid = await validateAudioContent(webmBlob);
 
-          if (!isValid) {
-            setError('No audio detected. Please check your microphone and make sure it\'s not muted.');
-            console.error('❌ Audio validation failed');
-          } else {
+          if (isValid) {
             try {
               // Convert to MP3
               const mp3Blob = await convertToMp3(webmBlob);
 
               // Double-check MP3 size
-              if (mp3Blob.size < 1000) {
-                setError('Recorded audio is too short or empty. Please try again.');
-              } else {
-                onVoiceData(mp3Blob);
-              }
+              onVoiceData(mp3Blob);
             } catch (error) {
-              console.error('Conversion error:', error);
+              // console.error('Conversion error:', error);
               setError('Failed to convert audio to MP3');
             }
           }
@@ -273,13 +268,14 @@ export default function VoiceRecorder({
         }
         setRecordingTime(0);
         setIsRecording(false);
+        setShowCancelConfirm(false);
         hasAudioInputRef.current = false;
       };
 
       mediaRecorder.onerror = (event) => {
-        console.error('MediaRecorder error:', event);
+        // console.error('MediaRecorder error:', event);
         setError('Recording error occurred');
-        stopRecording();
+        cancelRecording();
       };
 
       mediaRecorder.start(100);
@@ -298,7 +294,7 @@ export default function VoiceRecorder({
       }, 1000);
 
     } catch (error: any) {
-      console.error('Error accessing microphone:', error);
+      // console.error('Error accessing microphone:', error);
 
       if (error.name === 'NotAllowedError') {
         setError('Microphone access denied. Please allow microphone permissions.');
@@ -321,6 +317,44 @@ export default function VoiceRecorder({
         timerRef.current = null;
       }
     }
+  };
+
+  const cancelRecording = () => {
+    console.log('Cancelling recording...');
+
+    // Stop the recording
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+
+    // Clear the recording chunks
+    chunksRef.current = [];
+
+    // Clean up resources
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    // Stop audio monitoring
+    stopAudioLevelMonitoring();
+
+    // Reset states
+    setRecordingTime(0);
+    setIsRecording(false);
+    setShowCancelConfirm(false);
+    hasAudioInputRef.current = false;
+
+    console.log('Recording cancelled');
+  };
+
+  const confirmCancel = () => {
+    setShowCancelConfirm(true);
   };
 
   const handleClick = () => {
@@ -382,25 +416,77 @@ export default function VoiceRecorder({
         </div>
       )}
 
-      {/* Microphone Button */}
-      <div className="mic-button-wrapper">
-        {isRecording && <div className="mic-button-pulse"></div>}
-        <button
-          onClick={handleClick}
-          disabled={isDisabled}
-          className={`mic-button ${isRecording ? 'recording' : ''} ${isDisabled ? 'disabled' : ''}`}
-          aria-label={isRecording ? 'Click to stop recording' : 'Click to start recording'}
-        >
-          {isRecording ? (
-            <svg className="mic-button-stop-icon" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
-          ) : (
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-          )}
-        </button>
+      {/* Cancel Confirmation Dialog */}
+      {showCancelConfirm && (
+        <div className="cancel-confirmation-dialog">
+          <div className="dialog-content">
+            <h3>Cancel Recording?</h3>
+            <p>Are you sure you want to cancel this recording? All recorded audio will be lost.</p>
+            <div className="dialog-buttons">
+              <button
+                className="dialog-button cancel-confirm-button"
+                onClick={cancelRecording}
+              >
+                Yes, Cancel
+              </button>
+              <button
+                className="dialog-button cancel-back-button"
+                onClick={() => setShowCancelConfirm(false)}
+              >
+                Continue Recording
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Microphone Button and Action Buttons */}
+      <div className="recorder-controls">
+        <div className="mic-button-wrapper">
+          {isRecording && <div className="mic-button-pulse"></div>}
+          <button
+            onClick={handleClick}
+            disabled={isDisabled}
+            className={`mic-button ${isRecording ? 'recording' : ''} ${isDisabled ? 'disabled' : ''}`}
+            aria-label={isRecording ? 'Click to stop recording and send' : 'Click to start recording'}
+          >
+            {isRecording ? (
+              <svg className="mic-button-stop-icon" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            ) : (
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Recording Action Buttons */}
+        {isRecording && (
+          <div className="recording-action-buttons">
+            <button
+              className="action-button cancel-button"
+              onClick={confirmCancel}
+              disabled={isConverting}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+              </svg>
+              <span>Cancel</span>
+            </button>
+            <button
+              className="action-button send-button"
+              onClick={stopRecording}
+              disabled={isConverting}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
+              <span>Send</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Instructions */}
@@ -410,7 +496,7 @@ export default function VoiceRecorder({
           : isConverting
             ? 'Converting audio...'
             : isRecording
-              ? 'Click again to stop and send'
+              ? 'Click Send to finish or Cancel to discard'
               : disabled
                 ? 'Please wait...'
                 : 'Click to start recording'
