@@ -254,6 +254,11 @@ export default function ChatPage() {
     // Append to existing messages (including history)
     setMessages(prev => [...prev, userMessage]);
 
+    const typingDelay = getRandomDelay(1000, 5000);
+    setTimeout(() => {
+      setIsTyping(true);
+    }, typingDelay);
+
     // Simulate delivery status (12-20 seconds)
     const deliveryDelay = getRandomDelay(12000, 20000);
     setTimeout(() => {
@@ -381,7 +386,6 @@ export default function ChatPage() {
       // Show typing indicator (2-5 seconds before response)
       setIsProcessing(false);
       const typingDelay = getRandomDelay(2000, 5000);
-      setIsTyping(true);
       await new Promise(resolve => setTimeout(resolve, typingDelay));
       setIsTyping(false);
 
