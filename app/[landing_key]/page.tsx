@@ -90,6 +90,8 @@ export default function ChatPage() {
     const sessionString = localStorage.getItem("session");
     if (sessionString) {
       const session = JSON.parse(sessionString) as SessionData;
+      console.log("Current session: ");
+      console.log(session);
       setSessionData(session);
       setIsLoading(false);
     } else {
