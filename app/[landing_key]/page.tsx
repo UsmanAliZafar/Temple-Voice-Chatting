@@ -95,6 +95,7 @@ export default function ChatPage() {
       console.log(session);
       setSessionData(session);
       setIsLoading(false);
+      loadChatHistory();
     } else {
       try {
         setIsLoading(true);
@@ -132,6 +133,7 @@ export default function ChatPage() {
         setIsLoading(false);
         localStorage.removeItem('session');
         localStorage.setItem("session", JSON.stringify(data));
+        loadChatHistory();
       } catch (error: any) {
         console.error('Error fetching session data:', error);
         setError(error.message || 'Failed to load session');
@@ -217,13 +219,6 @@ export default function ChatPage() {
       setIsLoadingHistory(false);
     }
   };
-
-  // Load history after session data is loaded
-  useEffect(() => {
-    if (sessionData && !historyLoaded && !isLoadingHistory) {
-      loadChatHistory();
-    }
-  }, [sessionData, historyLoaded, isLoadingHistory]);
 
   const handleGoBack = () => {
     window.location.href = backUrl;
