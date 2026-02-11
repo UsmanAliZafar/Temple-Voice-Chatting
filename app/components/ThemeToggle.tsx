@@ -5,11 +5,11 @@ import { useEffect, useState } from 'react';
 
 export default function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
-  
+
   // Try to get theme context, but handle if it doesn't exist
   let theme: 'light' | 'dark' = 'light';
-  let toggleTheme = () => {};
-  
+  let toggleTheme = () => { };
+
   try {
     const context = useTheme();
     theme = context.theme;
@@ -17,7 +17,7 @@ export default function ThemeToggle() {
   } catch (error) {
     // If we're outside ThemeProvider, create local state
     const [localTheme, setLocalTheme] = useState<'light' | 'dark'>('light');
-    
+
     useEffect(() => {
       const stored = localStorage.getItem('theme') as 'light' | 'dark';
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -25,12 +25,13 @@ export default function ThemeToggle() {
       setLocalTheme(initialTheme);
       document.documentElement.setAttribute('data-theme', initialTheme);
     }, []);
-    
+
     theme = localTheme;
     toggleTheme = () => {
       const newTheme = localTheme === 'light' ? 'dark' : 'light';
       setLocalTheme(newTheme);
       document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.removeItem('theme');
       localStorage.setItem('theme', newTheme);
     };
   }
@@ -58,7 +59,7 @@ export default function ThemeToggle() {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
       </svg>
-      
+
       {/* Sun icon - shown in dark mode */}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="5" />

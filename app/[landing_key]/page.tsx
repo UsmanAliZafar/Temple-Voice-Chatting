@@ -76,6 +76,7 @@ export default function ChatPage() {
   // Fetch session data on mount
   useEffect(() => {
     if (landing_key && landing_key != "session") {
+      localStorage.removeItem('landing_key');
       localStorage.setItem('landing_key', landing_key);
       router.replace('/session');
     }
@@ -126,6 +127,7 @@ export default function ChatPage() {
         console.log('Session data loaded:', data);
         setSessionData(data);
         setIsLoading(false);
+        localStorage.removeItem('session');
         localStorage.setItem("session", JSON.stringify(data));
       } catch (error: any) {
         console.error('Error fetching session data:', error);

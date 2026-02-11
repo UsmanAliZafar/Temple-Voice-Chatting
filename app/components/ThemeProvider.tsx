@@ -25,6 +25,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mounted) return;
     document.documentElement.setAttribute('data-theme', theme);
+    localStorage.removeItem('theme');
     localStorage.setItem('theme', theme);
   }, [theme, mounted]);
 
