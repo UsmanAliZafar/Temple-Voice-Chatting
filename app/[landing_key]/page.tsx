@@ -78,6 +78,7 @@ export default function ChatPage() {
     if (landing_key && landing_key != "session") {
       localStorage.removeItem('landing_key');
       localStorage.setItem('landing_key', landing_key);
+      localStorage.removeItem('session');
       router.replace('/session');
     }
   }, [landing_key, router]);
