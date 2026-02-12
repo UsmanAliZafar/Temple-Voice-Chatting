@@ -144,6 +144,10 @@ export default function ChatPage() {
     }
   };
 
+  useEffect(() => {
+    loadChatHistory();
+  }, [sessionData, historyLoaded]);
+
   // Load chat history
   const loadChatHistory = async () => {
     if (!sessionData || historyLoaded) return;
