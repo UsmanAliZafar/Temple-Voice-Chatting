@@ -55,6 +55,14 @@ export default function ChatPage() {
   const [showEndChatModal, setShowEndChatModal] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [logoutPopup, setLogoutPopup] = useState<{
+    show: boolean;
+    message: string;
+  }>({
+    show: false,
+    message: ''
+  });
+  const [logoutCountdown, setLogoutCountdown] = useState(30);
 
   const chatSiteUrl = process.env.NEXT_PUBLIC_CHAT_SITE_URL || 'https://phonetalktemple.com';
   const backUrl = process.env.NEXT_PUBLIC_BACK_URL_SESSION_EXPIRED || 'https://phonetalktemple.com';
@@ -228,6 +236,32 @@ export default function ChatPage() {
     window.location.href = backUrl;
   };
 
+  const handleLogoutRedirect = () => {
+    if (!sessionData) return;
+    localStorage.removeItem('landing_key');
+    localStorage.removeItem('session');
+    window.location.href = `${sessionData.url}?end=session`;
+  };
+
+  useEffect(() => {
+    if (!logoutPopup.show || !sessionData) return;
+
+    setLogoutCountdown(30);
+    const intervalId = setInterval(() => {
+      setLogoutCountdown((prev) => {
+        if (prev <= 1) {
+          window.location.href = `${sessionData.url}?end=session`;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [logoutPopup.show, sessionData]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -364,6 +398,14 @@ export default function ChatPage() {
         }
 
         throw new Error(errorMessage);
+      }
+
+      if (data.logout) {
+        setLogoutPopup({
+          show: true,
+          message: data.message || 'Your session has ended.'
+        });
+        return;
       }
 
       // Check for success and audio data (base64)
@@ -579,6 +621,41 @@ export default function ChatPage() {
   // Main chat interface
   return (
     <div>
+      {logoutPopup.show && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.5)',
+            pointerEvents: 'auto'
+          }}
+        >
+          <div
+            style={{
+              width: 'min(90vw, 420px)',
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '12px',
+              boxShadow: '0 12px 28px rgba(0, 0, 0, 0.2)',
+              padding: '20px'
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Oops!</h3>
+            <p style={{ margin: '10px 0 8px' }}>{logoutPopup.message}</p>
+            <p style={{ margin: '0 0 16px', fontSize: '0.9rem', opacity: 0.85 }}>
+              Redirecting in {logoutCountdown}s
+            </p>
+            <button onClick={handleLogoutRedirect} className="back-button" style={{ margin: "auto" }}>
+              Back to Home
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Session Expired Overlay during chat */}
       {isSessionExpired && (
         <div className="session-expired-overlay">
