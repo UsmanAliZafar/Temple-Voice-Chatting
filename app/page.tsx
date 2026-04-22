@@ -15,7 +15,7 @@ export default function Home() {
         window.location.href = chatSiteUrl;
       }, 5000)
     }
-  }, [router]);
+  }, [router, chatSiteUrl]);
 
   return (
     <div className="error-page">
