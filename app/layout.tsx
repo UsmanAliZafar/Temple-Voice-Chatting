@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "VoiceChat AI - Smart Voice Conversations",
+  title: `VoiceChat AI - Smart Voice Conversations | ${process.env.NEXT_PUBLIC_APP_NAME}`,
   description: "AI-powered voice chat application with real-time responses",
 };
 
