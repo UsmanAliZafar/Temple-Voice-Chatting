@@ -11,7 +11,9 @@ export default function Home() {
     if (sessionString) {
       router.replace('/session');
     } else {
-      window.location.href = chatSiteUrl;
+      setTimeout(function(){
+        window.location.href = chatSiteUrl;
+      }, 5000)
     }
   }, [router]);
 
@@ -19,6 +21,7 @@ export default function Home() {
     <div className="error-page">
       <main className="main-container" style={{ height: "100vh" }}>
         <div className="error-container" style={{ height: "100%" }}>
+          <h1 style={{fontSize: "1rem", fontFamily: "cursive", fontStyle: "italic", border: "solid 1px lightblue", padding: "10px", borderRadius: "10px", backgroundColor: "lightblue"}}>{process.env.NEXT_PUBLIC_APP_NAME}</h1>
           <svg width="300" height="300" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M18 7L22 11L18 15" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" />
