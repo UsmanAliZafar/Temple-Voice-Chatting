@@ -64,8 +64,8 @@ export default function ChatPage() {
   });
   const [logoutCountdown, setLogoutCountdown] = useState(30);
 
-  const chatSiteUrl = process.env.NEXT_PUBLIC_CHAT_SITE_URL || 'https://phonetalktemple.com';
-  const backUrl = process.env.NEXT_PUBLIC_BACK_URL_SESSION_EXPIRED || 'https://phonetalktemple.com';
+  const chatSiteUrl = process.env.NEXT_PUBLIC_CHAT_SITE_URL;
+  const backUrl = process.env.NEXT_PUBLIC_BACK_URL_SESSION_EXPIRED;
 
   // Helper function to convert base64 to blob URL
   const base64ToBlob = (base64: string, mimeType: string): Blob => {

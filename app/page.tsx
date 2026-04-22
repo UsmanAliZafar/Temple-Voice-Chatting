@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const router = useRouter();
-  const chatSiteUrl = process.env.NEXT_PUBLIC_CHAT_SITE_URL || 'https://phonetalktemple.com';
+  const chatSiteUrl = process.env.NEXT_PUBLIC_CHAT_SITE_URL;
 
   useEffect(() => {
     const sessionString = localStorage.getItem("session");
